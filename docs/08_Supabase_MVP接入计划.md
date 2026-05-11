@@ -42,7 +42,8 @@ flutter run \
 | M2 | 普通用户车次、预约、取消、支付流水切 Supabase | 已完成 |
 | M3 | 后台车辆、司机、调度、位置切 Supabase | 已完成 |
 | M3.5 | 后台历史分析由真实数据聚合 | 待做 |
-| M4 | 司机任务和位置上报切 Supabase Realtime | 待做 |
+| M4 | 司机任务和位置上报切 Supabase | 已完成 |
+| M4.5 | 司机和后台位置使用 Supabase Realtime 订阅 | 待做 |
 | M5 | 支付沙箱后台确认、通知持久化、权限细化 | 待做 |
 
 ## 当前保留 Mock 的原因
@@ -70,11 +71,14 @@ flutter run \
 | 人工调度 | 已接入 | 人工调度方案会写入 `dispatch_plans` |
 | 调度确认 | 已接入 | 确认后更新 `dispatch_plans`、`dispatch_demands`、`vehicles`、`drivers` 并写入 `vehicle_locations` |
 | 位置刷新 | 已接入 | 后台 Mock 位置刷新会追加写入 `vehicle_locations` |
+| 司机任务 | 已接入 | 司机端按 `drivers.profile_id` 读取 `trips` 和关联预约乘客名单 |
+| 司机任务状态 | 已接入 | 开始任务和完成任务会更新 `trips.status` |
+| 司机位置上报 | 已接入 | 司机端位置上报会写入 `vehicle_locations` |
 
 ## 下一步重点
 
 | 优先级 | 内容 |
 | --- | --- |
-| 高 | 将司机端任务列表、开始任务、完成任务和位置上报切到 Supabase |
+| 高 | 使用 Supabase Realtime 订阅车辆位置，替代手动刷新 |
 | 中 | 将通知中心持久化到 `notifications` |
 | 中 | 将后台历史分析改为由真实预约和支付数据聚合 |

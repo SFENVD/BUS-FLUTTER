@@ -1,13 +1,23 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
+import '../../../../core/config/backend_config.dart';
 import '../../../../core/models/driver_task_model.dart';
 import '../../../../core/models/location_update.dart';
+import '../../../../core/providers/auth_provider.dart';
 import '../data/mock_driver_repository.dart';
+import '../data/supabase_driver_repository.dart';
 
 final mockDriverRepositoryProvider = Provider<MockDriverRepository>((ref) {
   return MockDriverRepository();
+});
+
+final supabaseDriverRepositoryProvider = Provider<SupabaseDriverRepository>((
+  ref,
+) {
+  return SupabaseDriverRepository(Supabase.instance.client);
 });
 
 final driverTaskProvider =
@@ -91,12 +101,21 @@ class DriverTaskController extends Notifier<DriverTaskState> {
     ref.onDispose(_stopTimer);
 
     final repository = ref.read(mockDriverRepositoryProvider);
-    return DriverTaskState(
+    final initialState = DriverTaskState(
       tasks: repository.fetchTasks(),
       stats: repository.fetchStats(),
       selectedStatsPeriod: '日',
       locationUpdates: const [],
     );
+
+    if (BackendConfig.useSupabase) {
+      final profileId = ref.read(authControllerProvider).user?.id;
+      if (profileId != null) {
+        unawaited(_loadSupabaseSnapshot(profileId));
+      }
+    }
+
+    return initialState;
   }
 
   void selectStatsPeriod(String period) {
@@ -124,6 +143,10 @@ class DriverTaskController extends Notifier<DriverTaskState> {
     final nextTasks = [...state.tasks];
     nextTasks[index] = task.copyWith(status: DriverTaskStatus.running);
     state = state.copyWith(tasks: nextTasks, activeTaskId: taskId);
+
+    if (BackendConfig.useSupabase) {
+      unawaited(_persistTaskStatus(taskId, DriverTaskStatus.running));
+    }
 
     _appendLocationUpdate();
     _locationTimer = Timer.periodic(const Duration(seconds: 5), (_) {
@@ -156,6 +179,10 @@ class DriverTaskController extends Notifier<DriverTaskState> {
     _stopTimer();
     state = state.copyWith(tasks: nextTasks, clearActiveTask: true);
 
+    if (BackendConfig.useSupabase) {
+      unawaited(_persistTaskStatus(taskId, DriverTaskStatus.completed));
+    }
+
     return const DriverActionResult(success: true, message: '任务已完成，位置共享已停止');
   }
 
@@ -184,11 +211,53 @@ class DriverTaskController extends Notifier<DriverTaskState> {
     );
 
     state = state.copyWith(locationUpdates: [update, ...state.locationUpdates]);
+    if (BackendConfig.useSupabase) {
+      unawaited(_persistLocationUpdate(task, update));
+    }
   }
 
   void _stopTimer() {
     _locationTimer?.cancel();
     _locationTimer = null;
+  }
+
+  Future<void> _loadSupabaseSnapshot(String profileId) async {
+    try {
+      final snapshot = await ref
+          .read(supabaseDriverRepositoryProvider)
+          .fetchSnapshot(profileId);
+      state = DriverTaskState(
+        tasks: snapshot.tasks,
+        stats: snapshot.stats,
+        selectedStatsPeriod: state.selectedStatsPeriod,
+        locationUpdates: snapshot.locationUpdates,
+        activeTaskId: snapshot.activeTaskId,
+      );
+    } catch (_) {
+      // Keep Mock fallback state visible if Supabase is unreachable.
+    }
+  }
+
+  Future<void> _persistTaskStatus(
+    String taskId,
+    DriverTaskStatus status,
+  ) async {
+    try {
+      await ref
+          .read(supabaseDriverRepositoryProvider)
+          .updateTripStatus(tripId: taskId, status: status);
+    } catch (_) {}
+  }
+
+  Future<void> _persistLocationUpdate(
+    DriverTaskModel task,
+    LocationUpdate update,
+  ) async {
+    try {
+      await ref
+          .read(supabaseDriverRepositoryProvider)
+          .insertLocation(task: task, update: update);
+    } catch (_) {}
   }
 }
 

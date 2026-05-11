@@ -87,6 +87,27 @@ on conflict (id) do update set
   booked_seats = excluded.booked_seats,
   status = excluded.status;
 
+insert into bookings (id, user_id, trip_id, seat_no, status, fare, payment_status, pickup_point)
+select
+  '00000000-0000-0000-0000-000000000601'::uuid,
+  p.id,
+  '00000000-0000-0000-0000-000000000301'::uuid,
+  5,
+  'pending',
+  3,
+  'paid',
+  '南门学生公寓'
+from profiles p
+where p.phone = '13800000001'
+on conflict (id) do update set
+  user_id = excluded.user_id,
+  trip_id = excluded.trip_id,
+  seat_no = excluded.seat_no,
+  status = excluded.status,
+  fare = excluded.fare,
+  payment_status = excluded.payment_status,
+  pickup_point = excluded.pickup_point;
+
 insert into dispatch_demands (id, route_name, origin, destination, passenger_count, departure_time, status) values
   ('00000000-0000-0000-0000-000000000401', '大学城早班线', '南门学生公寓', '综合教学楼', 36, now() + interval '1 hour 20 minutes', 'pending'),
   ('00000000-0000-0000-0000-000000000402', '科技园通勤线', '图书馆广场', '科技园东门', 28, now() + interval '2 hours 10 minutes', 'pending'),

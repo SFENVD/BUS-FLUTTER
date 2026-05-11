@@ -31,6 +31,7 @@ class DriverTaskModel {
     required this.origin,
     required this.destination,
     required this.vehicleId,
+    this.driverId = '',
     required this.plateNo,
     required this.departureTime,
     required this.distanceKm,
@@ -44,6 +45,7 @@ class DriverTaskModel {
   final String origin;
   final String destination;
   final String vehicleId;
+  final String driverId;
   final String plateNo;
   final DateTime departureTime;
   final double distanceKm;
@@ -58,6 +60,7 @@ class DriverTaskModel {
       origin: origin,
       destination: destination,
       vehicleId: vehicleId,
+      driverId: driverId,
       plateNo: plateNo,
       departureTime: departureTime,
       distanceKm: distanceKm,

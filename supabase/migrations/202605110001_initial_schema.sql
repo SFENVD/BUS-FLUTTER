@@ -197,6 +197,15 @@ create policy "drivers_write_admin" on drivers for all using (is_admin()) with c
 
 create policy "trips_select_authenticated" on trips for select using (auth.role() = 'authenticated');
 create policy "trips_write_admin" on trips for all using (is_admin()) with check (is_admin());
+create policy "trips_update_assigned_driver" on trips for update using (
+  exists (
+    select 1 from drivers d where d.id = trips.driver_id and d.profile_id = auth.uid()
+  )
+) with check (
+  exists (
+    select 1 from drivers d where d.id = trips.driver_id and d.profile_id = auth.uid()
+  )
+);
 
 create policy "bookings_select_owner_driver_admin" on bookings for select using (
   user_id = auth.uid()
@@ -218,7 +227,13 @@ create policy "payments_select_owner_or_admin" on payments for select using (
 create policy "payments_insert_owner" on payments for insert with check (
   exists (select 1 from bookings b where b.id = payments.booking_id and b.user_id = auth.uid())
 );
-create policy "payments_update_admin" on payments for update using (is_admin()) with check (is_admin());
+create policy "payments_update_owner_or_admin" on payments for update using (
+  is_admin()
+  or exists (select 1 from bookings b where b.id = payments.booking_id and b.user_id = auth.uid())
+) with check (
+  is_admin()
+  or exists (select 1 from bookings b where b.id = payments.booking_id and b.user_id = auth.uid())
+);
 
 create policy "dispatch_demands_select_admin" on dispatch_demands for select using (is_admin());
 create policy "dispatch_demands_write_admin" on dispatch_demands for all using (is_admin()) with check (is_admin());
