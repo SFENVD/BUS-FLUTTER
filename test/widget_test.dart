@@ -51,7 +51,7 @@ void main() {
     await _loginAsPassenger(tester);
 
     expect(find.text('信用等级'), findsOneWidget);
-    expect(find.text('Mock 推送通知'), findsOneWidget);
+    expect(find.text('推送通知'), findsOneWidget);
 
     await tester.ensureVisible(find.byKey(const Key('book_trip_trip-001')));
     await tester.tap(find.byKey(const Key('book_trip_trip-001')));

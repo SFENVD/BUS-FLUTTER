@@ -601,7 +601,7 @@ class _NotificationPanel extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'Mock 推送通知',
+                    '推送通知',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w900,
                     ),
@@ -617,7 +617,7 @@ class _NotificationPanel extends StatelessWidget {
             const SizedBox(height: 8),
             if (notifications.isEmpty)
               Text(
-                '预约、支付和信用变化会在这里生成 Mock 推送。',
+                '预约、支付和信用变化会在这里生成推送通知。',
                 style: TextStyle(color: colorScheme.onSurfaceVariant),
               )
             else
