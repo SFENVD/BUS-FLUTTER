@@ -190,6 +190,10 @@ void main() {
     expect(find.text('校A·3099'), findsWidgets);
     expect(find.text('钱师傅'), findsWidgets);
 
+    await tester.ensureVisible(find.text('预约客户 ETA'));
+    expect(find.text('预约客户 ETA'), findsOneWidget);
+    expect(find.textContaining('预计 8 分钟'), findsOneWidget);
+
     await tester.ensureVisible(
       find.byKey(const Key('simulate_admin_location_tick')),
     );

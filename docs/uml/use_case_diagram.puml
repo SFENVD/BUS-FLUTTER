@@ -1,0 +1,61 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+actor "普通用户" as Passenger
+actor "司机" as Driver
+actor "后台管理员" as Admin
+
+rectangle "校车管理系统" {
+  usecase "登录系统" as UC_Login
+  usecase "查看车次" as UC_ViewTrip
+  usecase "预约车次" as UC_Book
+  usecase "支付车费" as UC_Pay
+  usecase "取消预约" as UC_Cancel
+  usecase "查看信用等级" as UC_Credit
+  usecase "查看通知" as UC_Notify
+
+  usecase "查看派车任务" as UC_Task
+  usecase "查看乘客名单" as UC_PassengerList
+  usecase "查看日周月统计" as UC_DriverStats
+  usecase "共享实时位置" as UC_ShareLocation
+
+  usecase "车辆管理" as UC_Vehicle
+  usecase "司机管理" as UC_DriverMgmt
+  usecase "人工调度" as UC_ManualDispatch
+  usecase "AI 辅助调度" as UC_AiDispatch
+  usecase "实时位置监控" as UC_Tracking
+  usecase "查看客户 ETA" as UC_ETA
+  usecase "历史数据分析" as UC_Analytics
+}
+
+Passenger --> UC_Login
+Passenger --> UC_ViewTrip
+Passenger --> UC_Book
+Passenger --> UC_Pay
+Passenger --> UC_Cancel
+Passenger --> UC_Credit
+Passenger --> UC_Notify
+
+Driver --> UC_Login
+Driver --> UC_Task
+Driver --> UC_PassengerList
+Driver --> UC_DriverStats
+Driver --> UC_ShareLocation
+
+Admin --> UC_Login
+Admin --> UC_Vehicle
+Admin --> UC_DriverMgmt
+Admin --> UC_ManualDispatch
+Admin --> UC_AiDispatch
+Admin --> UC_Tracking
+Admin --> UC_ETA
+Admin --> UC_Analytics
+
+UC_Book ..> UC_ViewTrip : <<include>>
+UC_Cancel ..> UC_Credit : <<include>>
+UC_ShareLocation ..> UC_Task : <<extend>>
+UC_Tracking ..> UC_ShareLocation : <<include>>
+UC_ETA ..> UC_Tracking : <<include>>
+UC_AiDispatch ..> UC_ManualDispatch : <<extend>>
+@enduml

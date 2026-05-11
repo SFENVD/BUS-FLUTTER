@@ -942,6 +942,8 @@ class _TrackingPanel extends ConsumerWidget {
                 );
               },
             ),
+            const SizedBox(height: 14),
+            const _PassengerEtaPanel(),
           ],
         ),
       ),
@@ -1133,6 +1135,109 @@ class _VehicleTrackingDetail extends StatelessWidget {
       ),
     );
   }
+}
+
+class _PassengerEtaPanel extends StatelessWidget {
+  const _PassengerEtaPanel();
+
+  static const _items = [
+    _PassengerEtaItem(
+      passengerName: '张同学',
+      pickupPoint: '南门学生公寓',
+      distanceKm: 1.2,
+      etaMinutes: 8,
+    ),
+    _PassengerEtaItem(
+      passengerName: '李老师',
+      pickupPoint: '图书馆广场',
+      distanceKm: 2.6,
+      etaMinutes: 14,
+    ),
+    _PassengerEtaItem(
+      passengerName: '周同学',
+      pickupPoint: '附属医院站',
+      distanceKm: 4.8,
+      etaMinutes: 23,
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: _softPanelDecoration(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '预约客户 ETA',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '根据 Mock 车辆位置估算预约客户与上车点的距离和到达时间。',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ..._items.map((item) => _PassengerEtaTile(item: item)),
+        ],
+      ),
+    );
+  }
+}
+
+class _PassengerEtaTile extends StatelessWidget {
+  const _PassengerEtaTile({required this.item});
+
+  final _PassengerEtaItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          const CircleAvatar(child: Icon(Icons.person_outline)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.passengerName,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                Text(item.pickupPoint),
+              ],
+            ),
+          ),
+          Text(
+            '${item.distanceKm.toStringAsFixed(1)} km · 预计 ${item.etaMinutes} 分钟',
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PassengerEtaItem {
+  const _PassengerEtaItem({
+    required this.passengerName,
+    required this.pickupPoint,
+    required this.distanceKm,
+    required this.etaMinutes,
+  });
+
+  final String passengerName;
+  final String pickupPoint;
+  final double distanceKm;
+  final int etaMinutes;
 }
 
 class _DetailRow extends StatelessWidget {

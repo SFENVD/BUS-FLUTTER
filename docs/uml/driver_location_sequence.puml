@@ -1,0 +1,21 @@
+@startuml
+actor "司机" as Driver
+participant "DriverHomePage" as Page
+participant "DriverTaskController" as Controller
+participant "DriverTaskState" as State
+participant "Timer" as Timer
+
+Driver -> Page : 点击开始任务
+Page -> Controller : startTask(taskId)
+Controller -> State : 校验是否已有进行中任务
+Controller -> State : 更新任务状态为 running
+Controller -> Controller : _appendLocationUpdate()
+Controller -> State : 追加 LocationUpdate
+Controller -> Timer : 每 5 秒触发
+Timer -> Controller : _appendLocationUpdate()
+Controller -> State : 追加新的经纬度和速度
+Driver -> Page : 点击到站完成
+Page -> Controller : completeActiveTask()
+Controller -> Timer : cancel()
+Controller -> State : 更新任务状态为 completed
+@enduml
