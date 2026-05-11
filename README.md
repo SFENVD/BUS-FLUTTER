@@ -30,6 +30,13 @@ flutter run --dart-define=APP_MODE=driver
 flutter run -d chrome --dart-define=APP_MODE=admin
 ```
 
+## CI/CD
+
+- GitHub Actions 配置位于 `.github/workflows/flutter-ci-cd.yml`。
+- 推送到 `main` 或创建指向 `main` 的 PR 时，会执行 `flutter pub get`、`dart format --set-exit-if-changed lib test`、`flutter analyze`、`flutter test` 和 `flutter build web`。
+- `main` 分支推送验证通过后，会把后台管理端 Web 构建产物部署到 GitHub Pages。
+- 如需启用 Pages 部署，在 GitHub 仓库 `Settings > Pages > Build and deployment` 中选择 `GitHub Actions`。
+
 ## Mock 账号
 
 | 入口 | 手机号 | 密码 |
