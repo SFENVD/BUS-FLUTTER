@@ -127,6 +127,63 @@ class SupabaseAdminRepository {
     await _client.from('drivers').delete().eq('id', driverId);
   }
 
+  Future<List<DispatchPlanModel>> createDispatchPlans(
+    List<DispatchPlanModel> plans,
+  ) async {
+    if (plans.isEmpty) {
+      return const [];
+    }
+
+    final result = await _client
+        .from('dispatch_plans')
+        .insert(plans.map(_dispatchPlanToInsertJson).toList())
+        .select()
+        .order('created_at', ascending: false);
+
+    return result.map(_dispatchPlanFromJson).toList();
+  }
+
+  Future<SupabaseAdminSnapshot> confirmDispatchPlan({
+    required DispatchPlanModel plan,
+    required VehicleLocationModel location,
+    required bool shouldBindDriver,
+  }) async {
+    await _client
+        .from('dispatch_plans')
+        .update({'is_confirmed': true})
+        .eq('id', plan.id);
+    await _client
+        .from('dispatch_demands')
+        .update({'status': DispatchDemandStatus.assigned.value})
+        .eq('id', plan.demandId);
+    await _client
+        .from('vehicles')
+        .update({'status': VehicleStatus.running.value})
+        .eq('id', plan.vehicleId);
+
+    if (shouldBindDriver) {
+      await _client
+          .from('drivers')
+          .update({'bound_vehicle_id': plan.vehicleId})
+          .eq('id', plan.driverId);
+    }
+
+    await insertVehicleLocations([location]);
+    return fetchSnapshot();
+  }
+
+  Future<void> insertVehicleLocations(
+    List<VehicleLocationModel> locations,
+  ) async {
+    if (locations.isEmpty) {
+      return;
+    }
+
+    await _client
+        .from('vehicle_locations')
+        .insert(locations.map(_vehicleLocationToInsertJson).toList());
+  }
+
   VehicleModel _vehicleFromJson(Map<String, dynamic> json) {
     return VehicleModel(
       id: json['id'] as String,
@@ -184,6 +241,34 @@ class SupabaseAdminRepository {
       isAiGenerated: json['is_ai_generated'] as bool? ?? false,
       isConfirmed: json['is_confirmed'] as bool? ?? false,
     );
+  }
+
+  Map<String, dynamic> _dispatchPlanToInsertJson(DispatchPlanModel plan) {
+    return {
+      'demand_id': plan.demandId,
+      'route_name': plan.routeName,
+      'vehicle_id': plan.vehicleId,
+      'driver_id': plan.driverId,
+      'passenger_count': plan.passengerCount,
+      'departure_time': plan.departureTime.toIso8601String(),
+      'load_rate': plan.loadRate,
+      'is_ai_generated': plan.isAiGenerated,
+      'is_confirmed': plan.isConfirmed,
+    };
+  }
+
+  Map<String, dynamic> _vehicleLocationToInsertJson(
+    VehicleLocationModel location,
+  ) {
+    return {
+      'vehicle_id': location.vehicleId,
+      'trip_no': location.tripNo,
+      'driver_id': location.driverId,
+      'lat': location.lat,
+      'lng': location.lng,
+      'speed': location.speed,
+      'updated_at': location.updatedAt.toIso8601String(),
+    };
   }
 
   VehicleStatus _vehicleStatusFromValue(String value) {

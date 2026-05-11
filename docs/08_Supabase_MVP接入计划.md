@@ -2,7 +2,7 @@
 
 ## 当前阶段
 
-本分支 `feature/supabase-mvp` 已完成 Supabase MVP 前三步：认证层、普通用户车次/预约/支付，以及后台车辆/司机/调度基础数据具备 Supabase 接入能力，未配置 Supabase 环境变量时继续走 Mock，避免影响课程演示和自动化测试。
+本分支 `feature/supabase-mvp` 已完成 Supabase MVP 前三步：认证层、普通用户车次/预约/支付，以及后台车辆、司机、调度和位置数据具备 Supabase 接入能力，未配置 Supabase 环境变量时继续走 Mock，避免影响课程演示和自动化测试。
 
 ## 环境变量
 
@@ -40,7 +40,8 @@ flutter run \
 | --- | --- | --- |
 | M1 | Supabase 配置、初始化、认证 Repository 可切换 | 已完成 |
 | M2 | 普通用户车次、预约、取消、支付流水切 Supabase | 已完成 |
-| M3 | 后台车辆、司机、调度、位置、分析切 Supabase | 部分完成 |
+| M3 | 后台车辆、司机、调度、位置切 Supabase | 已完成 |
+| M3.5 | 后台历史分析由真实数据聚合 | 待做 |
 | M4 | 司机任务和位置上报切 Supabase Realtime | 待做 |
 | M5 | 支付沙箱后台确认、通知持久化、权限细化 | 待做 |
 
@@ -65,12 +66,15 @@ flutter run \
 | 后台基础数据 | 已接入 | 从 `vehicles`、`drivers`、`dispatch_demands`、`dispatch_plans`、`vehicle_locations` 加载数据 |
 | 车辆管理 | 已接入 | 新增、编辑、删除会后台持久化到 `vehicles` |
 | 司机管理 | 已接入 | 新增、编辑、删除会后台持久化到 `drivers` |
+| AI 调度 | 已接入 | 生成的 AI 推荐方案会写入 `dispatch_plans` |
+| 人工调度 | 已接入 | 人工调度方案会写入 `dispatch_plans` |
+| 调度确认 | 已接入 | 确认后更新 `dispatch_plans`、`dispatch_demands`、`vehicles`、`drivers` 并写入 `vehicle_locations` |
+| 位置刷新 | 已接入 | 后台 Mock 位置刷新会追加写入 `vehicle_locations` |
 
 ## 下一步重点
 
 | 优先级 | 内容 |
 | --- | --- |
-| 高 | 将后台调度方案生成、确认生效和位置更新持久化到 Supabase |
 | 高 | 将司机端任务列表、开始任务、完成任务和位置上报切到 Supabase |
 | 中 | 将通知中心持久化到 `notifications` |
 | 中 | 将后台历史分析改为由真实预约和支付数据聚合 |

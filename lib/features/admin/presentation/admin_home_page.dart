@@ -595,10 +595,13 @@ class _DispatchPanel extends ConsumerWidget {
                 ),
                 FilledButton.icon(
                   key: const Key('generate_ai_dispatch'),
-                  onPressed: () {
-                    final result = ref
+                  onPressed: () async {
+                    final result = await ref
                         .read(adminProvider.notifier)
                         .generateAiDispatchPlans();
+                    if (!context.mounted) {
+                      return;
+                    }
                     _showSnack(context, result.message);
                   },
                   icon: const Icon(Icons.auto_awesome_outlined),
@@ -687,13 +690,16 @@ class _DispatchDemandList extends ConsumerWidget {
       return;
     }
 
-    final result = ref
+    final result = await ref
         .read(adminProvider.notifier)
         .createManualDispatchPlan(
           demandId: demand.id,
           vehicleId: data.vehicleId,
           driverId: data.driverId,
         );
+    if (!context.mounted) {
+      return;
+    }
     _showSnack(context, result.message);
   }
 }
@@ -800,10 +806,13 @@ class _DispatchPlanList extends ConsumerWidget {
                     : Key('confirm_dispatch_plan_${plan.id}'),
                 onConfirm: plan.isConfirmed
                     ? null
-                    : () {
-                        final result = ref
+                    : () async {
+                        final result = await ref
                             .read(adminProvider.notifier)
                             .confirmDispatchPlan(plan.id);
+                        if (!context.mounted) {
+                          return;
+                        }
                         _showSnack(context, result.message);
                       },
               ),

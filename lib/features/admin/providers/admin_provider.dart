@@ -370,6 +370,7 @@ class AdminController extends Notifier<AdminState> {
   }
 
   void simulateLocationTick() {
+    final changedLocations = <VehicleLocationModel>[];
     final nextLocations = state.locations.map((location) {
       final vehicle = state.vehicleById(location.vehicleId);
       if (vehicle?.status != VehicleStatus.running) {
@@ -377,22 +378,27 @@ class AdminController extends Notifier<AdminState> {
       }
 
       final seed = location.updatedAt.second % 5;
-      return location.copyWith(
+      final nextLocation = location.copyWith(
         lat: location.lat + 0.0007 + seed * 0.00005,
         lng: location.lng + 0.0005 + seed * 0.00004,
         speed: 24 + seed * 4,
         updatedAt: DateTime.now(),
       );
+      changedLocations.add(nextLocation);
+      return nextLocation;
     }).toList();
 
     state = state.copyWith(locations: nextLocations);
+    if (BackendConfig.useSupabase) {
+      unawaited(_persistVehicleLocations(changedLocations));
+    }
   }
 
   void selectAnalyticsPeriod(AnalyticsPeriod period) {
     state = state.copyWith(selectedAnalyticsPeriod: period);
   }
 
-  AdminActionResult generateAiDispatchPlans() {
+  Future<AdminActionResult> generateAiDispatchPlans() async {
     final candidates = _availableVehicleDriverPairs();
     if (candidates.isEmpty) {
       return const AdminActionResult(
@@ -437,20 +443,31 @@ class AdminController extends Notifier<AdminState> {
       );
     }
 
+    var plansToApply = nextPlans;
+    if (BackendConfig.useSupabase) {
+      try {
+        plansToApply = await ref
+            .read(supabaseAdminRepositoryProvider)
+            .createDispatchPlans(nextPlans);
+      } catch (_) {
+        return const AdminActionResult(success: false, message: 'AI 调度建议保存失败');
+      }
+    }
+
     state = state.copyWith(
-      dispatchPlans: [...state.confirmedDispatchPlans, ...nextPlans],
+      dispatchPlans: [...state.confirmedDispatchPlans, ...plansToApply],
     );
     return AdminActionResult(
       success: true,
-      message: '已生成 ${nextPlans.length} 条 AI 调度建议',
+      message: '已生成 ${plansToApply.length} 条 AI 调度建议',
     );
   }
 
-  AdminActionResult createManualDispatchPlan({
+  Future<AdminActionResult> createManualDispatchPlan({
     required String demandId,
     required String vehicleId,
     required String driverId,
-  }) {
+  }) async {
     final demand = state.dispatchDemands
         .where((item) => item.id == demandId)
         .firstOrNull;
@@ -473,12 +490,23 @@ class AdminController extends Notifier<AdminState> {
       return const AdminActionResult(success: false, message: '车辆座位数不足');
     }
 
-    final plan = _buildDispatchPlan(
+    var plan = _buildDispatchPlan(
       demand: demand,
       vehicle: vehicle,
       driver: driver,
       isAiGenerated: false,
     );
+    if (BackendConfig.useSupabase) {
+      try {
+        final persistedPlans = await ref
+            .read(supabaseAdminRepositoryProvider)
+            .createDispatchPlans([plan]);
+        plan = persistedPlans.firstOrNull ?? plan;
+      } catch (_) {
+        return const AdminActionResult(success: false, message: '人工调度方案保存失败');
+      }
+    }
+
     state = state.copyWith(
       dispatchPlans: [
         ...state.confirmedDispatchPlans,
@@ -491,7 +519,7 @@ class AdminController extends Notifier<AdminState> {
     return const AdminActionResult(success: true, message: '人工调度方案已生成');
   }
 
-  AdminActionResult confirmDispatchPlan(String planId) {
+  Future<AdminActionResult> confirmDispatchPlan(String planId) async {
     final planIndex = state.dispatchPlans.indexWhere(
       (plan) => plan.id == planId,
     );
@@ -553,6 +581,29 @@ class AdminController extends Notifier<AdminState> {
       speed: 0,
       updatedAt: DateTime.now(),
     );
+
+    if (BackendConfig.useSupabase) {
+      try {
+        final snapshot = await ref
+            .read(supabaseAdminRepositoryProvider)
+            .confirmDispatchPlan(
+              plan: plan,
+              location: location,
+              shouldBindDriver: driver.boundVehicleId == null,
+            );
+        state = state.copyWith(
+          vehicles: snapshot.vehicles,
+          drivers: snapshot.drivers,
+          dispatchDemands: snapshot.dispatchDemands,
+          dispatchPlans: snapshot.dispatchPlans,
+          locations: snapshot.locations,
+          selectedVehicleId: plan.vehicleId,
+        );
+        return const AdminActionResult(success: true, message: '调度方案已确认并生效');
+      } catch (_) {
+        return const AdminActionResult(success: false, message: '调度方案确认失败');
+      }
+    }
 
     state = state.copyWith(
       vehicles: nextVehicles,
@@ -697,6 +748,16 @@ class AdminController extends Notifier<AdminState> {
     try {
       await ref.read(supabaseAdminRepositoryProvider).deleteDriver(driverId);
       await _loadSupabaseSnapshot();
+    } catch (_) {}
+  }
+
+  Future<void> _persistVehicleLocations(
+    List<VehicleLocationModel> locations,
+  ) async {
+    try {
+      await ref
+          .read(supabaseAdminRepositoryProvider)
+          .insertVehicleLocations(locations);
     } catch (_) {}
   }
 }
