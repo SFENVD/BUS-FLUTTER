@@ -1,11 +1,24 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
+
+import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/data/auth_state.dart';
 import '../../features/auth/data/mock_auth_repository.dart';
+import '../../features/auth/data/supabase_auth_repository.dart';
+import '../config/backend_config.dart';
 import '../models/app_mode.dart';
 
 final mockAuthRepositoryProvider = Provider<MockAuthRepository>((ref) {
   return MockAuthRepository();
+});
+
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  if (BackendConfig.useSupabase) {
+    return SupabaseAuthRepository(Supabase.instance.client);
+  }
+  return ref.watch(mockAuthRepositoryProvider);
 });
 
 final mockCredentialsProvider = Provider<List<MockCredential>>((ref) {
@@ -31,7 +44,7 @@ class AuthController extends Notifier<AuthState> {
 
     try {
       final user = await ref
-          .read(mockAuthRepositoryProvider)
+          .read(authRepositoryProvider)
           .login(phone: phone, password: password, mode: mode);
       state = AuthState(user: user);
       return true;
@@ -45,6 +58,7 @@ class AuthController extends Notifier<AuthState> {
   }
 
   void logout() {
+    unawaited(ref.read(authRepositoryProvider).logout());
     state = const AuthState();
   }
 

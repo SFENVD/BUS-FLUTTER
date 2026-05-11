@@ -238,14 +238,17 @@ class _PassengerHomePageState extends ConsumerState<PassengerHomePage> {
                 ),
                 FilledButton(
                   key: const Key('confirm_booking'),
-                  onPressed: () {
-                    final result = ref
+                  onPressed: () async {
+                    final result = await ref
                         .read(passengerBookingProvider.notifier)
                         .createBooking(
                           userId: user.id,
                           tripId: trip.id,
                           seatNo: selectedSeat,
                         );
+                    if (!context.mounted) {
+                      return;
+                    }
                     Navigator.of(dialogContext).pop();
                     _showSnack(result.message);
                   },
@@ -293,7 +296,7 @@ class _PassengerHomePageState extends ConsumerState<PassengerHomePage> {
       return;
     }
 
-    final result = ref
+    final result = await ref
         .read(passengerBookingProvider.notifier)
         .cancelBooking(booking.id);
     _showSnack(result.message);

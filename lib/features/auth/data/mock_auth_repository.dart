@@ -3,6 +3,7 @@ import 'dart:async';
 import '../../../core/models/app_mode.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/models/user_role.dart';
+import 'auth_repository.dart';
 
 class MockCredential {
   const MockCredential({required this.user, required this.password});
@@ -13,16 +14,7 @@ class MockCredential {
   AppMode get mode => user.role.appMode;
 }
 
-class AuthException implements Exception {
-  const AuthException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => message;
-}
-
-class MockAuthRepository {
+class MockAuthRepository implements AuthRepository {
   static const credentials = <MockCredential>[
     MockCredential(
       password: '123456',
@@ -56,6 +48,7 @@ class MockAuthRepository {
     ),
   ];
 
+  @override
   Future<UserModel> login({
     required String phone,
     required String password,
@@ -86,4 +79,7 @@ class MockAuthRepository {
 
     return matchedCredential.user;
   }
+
+  @override
+  Future<void> logout() async {}
 }

@@ -7,4 +7,11 @@ enum UserRole {
 
   final String value;
   final String label;
+
+  static UserRole fromValue(String value) {
+    return UserRole.values.firstWhere(
+      (role) => role.value == value,
+      orElse: () => UserRole.passenger,
+    );
+  }
 }

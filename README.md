@@ -14,6 +14,8 @@ Flutter 校车管理系统 P0 骨架，覆盖普通用户端、司机端和后�
 - P3 后台端：车辆 CRUD、司机 CRUD/绑定车辆、Mock 实时位置监控地图。
 - P4 后台端：预约需求汇总、人工调度、AI 辅助调度建议、预约客户 ETA、历史数据分析。
 - P5 用户端：Mock 微信/支付宝支付、信用等级/失信记录、Mock 推送通知中心、UI 收口。
+- P6 CI/CD：GitHub Actions 自动执行格式检查、静态分析、测试、Web 构建和 Pages 部署。
+- P7 Supabase MVP：已接入可切换后端配置、Supabase 认证、普通用户车次/预约/取消/支付流水、后台车辆/司机数据，未配置时自动回退 Mock。
 
 ## 启动方式
 
@@ -30,11 +32,35 @@ flutter run --dart-define=APP_MODE=driver
 flutter run -d chrome --dart-define=APP_MODE=admin
 ```
 
+## 后端模式
+
+默认 `BACKEND=auto`。未配置 Supabase 时自动使用 Mock；配置 `SUPABASE_URL` 和 `SUPABASE_ANON_KEY` 后可连接 Supabase。
+
+```bash
+# 强制 Mock
+flutter run --dart-define=BACKEND=mock --dart-define=APP_MODE=passenger
+
+# 使用 Supabase
+flutter run \
+  --dart-define=BACKEND=supabase \
+  --dart-define=SUPABASE_URL=https://your-project.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=your-anon-key \
+  --dart-define=APP_MODE=passenger
+```
+
+Supabase 数据库脚本位于：
+
+- `supabase/migrations/202605110001_initial_schema.sql`
+- `supabase/seed/202605110001_seed_demo_data.sql`
+
+详细接入步骤见 `docs/08_Supabase_MVP接入计划.md`。
+
 ## CI/CD
 
 - GitHub Actions 配置位于 `.github/workflows/flutter-ci-cd.yml`。
 - 推送到 `main` 或创建指向 `main` 的 PR 时，会执行 `flutter pub get`、`dart format --set-exit-if-changed lib test`、`flutter analyze`、`flutter test` 和 `flutter build web`。
 - `main` 分支推送验证通过后，会把后台管理端 Web 构建产物部署到 GitHub Pages。
+- CI 构建默认使用 `BACKEND=mock`，避免公开仓库依赖私有 Supabase 配置。
 - 如需启用 Pages 部署，在 GitHub 仓库 `Settings > Pages > Build and deployment` 中选择 `GitHub Actions`。
 
 ## Mock 账号

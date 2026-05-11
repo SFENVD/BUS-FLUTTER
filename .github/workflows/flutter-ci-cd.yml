@@ -46,7 +46,7 @@ jobs:
         run: flutter test
 
       - name: Build web app
-        run: flutter build web --release --base-href /BUS-FLUTTER/ --dart-define=APP_MODE=admin
+        run: flutter build web --release --base-href /BUS-FLUTTER/ --dart-define=APP_MODE=admin --dart-define=BACKEND=mock
 
       - name: Upload web artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
