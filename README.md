@@ -100,9 +100,32 @@ Supabase 数据库脚本位于：
 - `确认生效` 后需求变为已调度，车辆变为运行中，并进入实时位置监控。
 - 历史数据分析支持日/周/月切换，展示人次趋势、路线热度、收入和车辆利用率。
 
+## 期末提交入口
+
+- 最终报告：`docs/08_最终项目报告.md`
+- 项目计划：`docs/01_项目计划.md`
+- 需求文档：`docs/02_项目需求.md`
+- 设计文档：`docs/03_项目设计.md`
+- 源码说明：`docs/04_项目源码说明.md`
+- 测试文档：`docs/05_项目测试.md`
+- 配置管理：`docs/06_配置管理.md`
+- 工具标识：`docs/07_课程工具使用标识.md`
+- UML 说明：`docs/uml/README.md`
+
+## 最终提交前检查命令
+
+```bash
+flutter pub get
+dart format --set-exit-if-changed lib test
+flutter analyze
+flutter test
+flutter build web --release --dart-define=APP_MODE=admin
+```
+
 ## 项目报告
 
 - `docs/00_项目报告总览.md`：报告索引和完成情况总览。
+- `docs/08_最终项目报告.md`：期末提交总入口，串联计划、需求、设计、源码、测试、配置管理和工具标识。
 - `docs/01_项目计划.md`：项目计划、WBS、里程碑和甘特图。
 - `docs/02_项目需求.md`：需求说明、业务规则和用例。
 - `docs/03_项目设计.md`：架构设计、模块设计、数据模型和 UML。
