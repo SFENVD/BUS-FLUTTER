@@ -1,5 +1,9 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
+
+import '../../../../core/config/backend_config.dart';
 import '../../../../core/models/app_notification_model.dart';
 import '../../../../core/models/booking_model.dart';
 import '../../../../core/models/payment_model.dart';
@@ -7,12 +11,18 @@ import '../../../../core/models/trip_model.dart';
 import '../../../../core/providers/auth_provider.dart';
 import '../../../../core/providers/notification_provider.dart';
 import '../data/mock_passenger_repository.dart';
+import '../data/supabase_passenger_repository.dart';
 
 final mockPassengerRepositoryProvider = Provider<MockPassengerRepository>((
   ref,
 ) {
   return MockPassengerRepository();
 });
+
+final supabasePassengerRepositoryProvider =
+    Provider<SupabasePassengerRepository>((ref) {
+      return SupabasePassengerRepository(Supabase.instance.client);
+    });
 
 final passengerBookingProvider =
     NotifierProvider<PassengerBookingController, PassengerBookingState>(
@@ -120,18 +130,27 @@ class PassengerBookingController extends Notifier<PassengerBookingState> {
   @override
   PassengerBookingState build() {
     final repository = ref.read(mockPassengerRepositoryProvider);
-    return PassengerBookingState(
+    final initialState = PassengerBookingState(
       trips: repository.fetchTrips(),
       bookings: repository.fetchBookings(),
       payments: const [],
     );
+
+    if (BackendConfig.useSupabase) {
+      final userId = ref.read(authControllerProvider).user?.id;
+      if (userId != null) {
+        unawaited(_loadSupabaseSnapshot(userId));
+      }
+    }
+
+    return initialState;
   }
 
-  BookingActionResult createBooking({
+  Future<BookingActionResult> createBooking({
     required String userId,
     required String tripId,
     required int seatNo,
-  }) {
+  }) async {
     final trip = state.tripById(tripId);
     if (!trip.isBookable) {
       return const BookingActionResult(success: false, message: '该车次暂不可预约');
@@ -155,7 +174,7 @@ class PassengerBookingController extends Notifier<PassengerBookingState> {
       );
     }
 
-    final booking = BookingModel(
+    var booking = BookingModel(
       id: 'booking-${DateTime.now().microsecondsSinceEpoch}',
       userId: userId,
       tripId: tripId,
@@ -164,6 +183,16 @@ class PassengerBookingController extends Notifier<PassengerBookingState> {
       fare: trip.fare,
       createdAt: DateTime.now(),
     );
+
+    if (BackendConfig.useSupabase) {
+      try {
+        booking = await ref
+            .read(supabasePassengerRepositoryProvider)
+            .createBooking(userId: userId, trip: trip, seatNo: seatNo);
+      } catch (_) {
+        return const BookingActionResult(success: false, message: '预约失败，请稍后重试');
+      }
+    }
 
     state = PassengerBookingState(
       trips: state.trips,
@@ -186,7 +215,7 @@ class PassengerBookingController extends Notifier<PassengerBookingState> {
     );
   }
 
-  BookingActionResult cancelBooking(String bookingId) {
+  Future<BookingActionResult> cancelBooking(String bookingId) async {
     final index = state.bookings.indexWhere(
       (booking) => booking.id == bookingId,
     );
@@ -205,7 +234,11 @@ class PassengerBookingController extends Notifier<PassengerBookingState> {
     }
 
     final penalty = cancellationPenaltyForTrip(trip);
-    final updatedBooking = booking.copyWith(
+    final currentUser = ref.read(authControllerProvider).user;
+    final nextCreditScore = currentUser == null
+        ? 100
+        : (currentUser.creditScore - penalty).clamp(0, 100);
+    var updatedBooking = booking.copyWith(
       status: BookingStatus.cancelled,
       cancelledAt: DateTime.now(),
       creditPenalty: penalty,
@@ -213,6 +246,21 @@ class PassengerBookingController extends Notifier<PassengerBookingState> {
           ? BookingPaymentStatus.refunded
           : booking.paymentStatus,
     );
+
+    if (BackendConfig.useSupabase) {
+      try {
+        updatedBooking = await ref
+            .read(supabasePassengerRepositoryProvider)
+            .cancelBooking(
+              booking: booking,
+              creditPenalty: penalty,
+              nextCreditScore: nextCreditScore,
+            );
+      } catch (_) {
+        return const BookingActionResult(success: false, message: '取消失败，请稍后重试');
+      }
+    }
+
     final nextBookings = [...state.bookings];
     nextBookings[index] = updatedBooking;
 
@@ -268,7 +316,7 @@ class PassengerBookingController extends Notifier<PassengerBookingState> {
       return const BookingActionResult(success: false, message: '该订单已支付');
     }
 
-    final payment = PaymentModel(
+    var payment = PaymentModel(
       id: 'payment-${DateTime.now().microsecondsSinceEpoch}',
       bookingId: booking.id,
       amount: booking.fare,
@@ -276,6 +324,18 @@ class PassengerBookingController extends Notifier<PassengerBookingState> {
       status: PaymentStatus.processing,
       createdAt: DateTime.now(),
     );
+    if (BackendConfig.useSupabase) {
+      try {
+        payment = await ref
+            .read(supabasePassengerRepositoryProvider)
+            .createProcessingPayment(booking: booking, method: method);
+      } catch (_) {
+        return const BookingActionResult(
+          success: false,
+          message: '支付发起失败，请稍后重试',
+        );
+      }
+    }
     final processingBooking = booking.copyWith(
       paymentStatus: BookingPaymentStatus.processing,
       paymentMethod: method,
@@ -296,14 +356,32 @@ class PassengerBookingController extends Notifier<PassengerBookingState> {
       return const BookingActionResult(success: false, message: '该预约已取消');
     }
 
-    final paidBooking = latestBooking.copyWith(
+    var paidBooking = latestBooking.copyWith(
       paymentStatus: BookingPaymentStatus.paid,
       paymentMethod: method,
     );
-    final paidPayment = payment.copyWith(
+    var paidPayment = payment.copyWith(
       status: PaymentStatus.paid,
       completedAt: DateTime.now(),
     );
+    if (BackendConfig.useSupabase) {
+      try {
+        final result = await ref
+            .read(supabasePassengerRepositoryProvider)
+            .completePayment(
+              bookingId: latestBooking.id,
+              paymentId: payment.id,
+              method: method,
+            );
+        paidBooking = result.$1;
+        paidPayment = result.$2;
+      } catch (_) {
+        return const BookingActionResult(
+          success: false,
+          message: '支付确认失败，请稍后重试',
+        );
+      }
+    }
     _replaceBooking(latestIndex, paidBooking, payment: paidPayment);
 
     final trip = state.tripById(paidBooking.tripId);
@@ -345,6 +423,21 @@ class PassengerBookingController extends Notifier<PassengerBookingState> {
       bookings: nextBookings,
       payments: nextPayments,
     );
+  }
+
+  Future<void> _loadSupabaseSnapshot(String userId) async {
+    try {
+      final snapshot = await ref
+          .read(supabasePassengerRepositoryProvider)
+          .fetchSnapshot(userId);
+      state = PassengerBookingState(
+        trips: snapshot.trips,
+        bookings: snapshot.bookings,
+        payments: snapshot.payments,
+      );
+    } catch (_) {
+      // Keep the Mock fallback state visible if the remote backend is unavailable.
+    }
   }
 }
 

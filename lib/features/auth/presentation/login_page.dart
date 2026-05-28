@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/backend_config.dart';
 import '../../../core/models/app_mode.dart';
 import '../../../core/providers/app_mode_provider.dart';
 import '../../../core/providers/auth_provider.dart';
@@ -159,7 +160,7 @@ class _LoginIntro extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
-            'P0 Mock 环境',
+            '${BackendConfig.activeBackendLabel} 环境',
             style: TextStyle(
               color: colorScheme.onPrimary,
               fontWeight: FontWeight.w800,
@@ -176,7 +177,7 @@ class _LoginIntro extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Text(
-          '当前入口：${mode.title}。可用 `--dart-define=APP_MODE=${mode.value}` 指定启动端，也可在下方直接切换 Mock 入口。',
+          '当前入口：${mode.title}。可用 `--dart-define=APP_MODE=${mode.value}` 指定启动端，也可在下方直接切换演示入口。',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
             color: colorScheme.onSurfaceVariant,
             height: 1.55,

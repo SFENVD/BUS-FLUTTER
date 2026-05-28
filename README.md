@@ -14,6 +14,8 @@ Flutter 校车管理系统 P0 骨架，覆盖普通用户端、司机端和后�
 - P3 后台端：车辆 CRUD、司机 CRUD/绑定车辆、Mock 实时位置监控地图。
 - P4 后台端：预约需求汇总、人工调度、AI 辅助调度建议、预约客户 ETA、历史数据分析。
 - P5 用户端：Mock 微信/支付宝支付、信用等级/失信记录、Mock 推送通知中心、UI 收口。
+- P6 CI/CD：GitHub Actions 自动执行格式检查、静态分析、测试、Web 构建和 Pages 部署。
+- P7 Supabase MVP：已接入可切换后端配置、Supabase 认证、普通用户车次/预约/取消/支付流水/通知、后台车辆/司机/调度/位置、司机任务和位置上报，未配置时自动回退 Mock。
 
 ## 启动方式
 
@@ -30,11 +32,35 @@ flutter run --dart-define=APP_MODE=driver
 flutter run -d chrome --dart-define=APP_MODE=admin
 ```
 
+## 后端模式
+
+默认 `BACKEND=auto`。未配置 Supabase 时自动使用 Mock；配置 `SUPABASE_URL` 和 `SUPABASE_ANON_KEY` 后可连接 Supabase。
+
+```bash
+# 强制 Mock
+flutter run --dart-define=BACKEND=mock --dart-define=APP_MODE=passenger
+
+# 使用 Supabase
+flutter run \
+  --dart-define=BACKEND=supabase \
+  --dart-define=SUPABASE_URL=https://your-project.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=your-anon-key \
+  --dart-define=APP_MODE=passenger
+```
+
+Supabase 数据库脚本位于：
+
+- `supabase/migrations/202605110001_initial_schema.sql`
+- `supabase/seed/202605110001_seed_demo_data.sql`
+
+详细接入步骤见 `docs/08_Supabase_MVP接入计划.md`。
+
 ## CI/CD
 
 - GitHub Actions 配置位于 `.github/workflows/flutter-ci-cd.yml`。
 - 推送到 `main` 或创建指向 `main` 的 PR 时，会执行 `flutter pub get`、`dart format --set-exit-if-changed lib test`、`flutter analyze`、`flutter test` 和 `flutter build web`。
 - `main` 分支推送验证通过后，会把后台管理端 Web 构建产物部署到 GitHub Pages。
+- CI 构建默认使用 `BACKEND=mock`，避免公开仓库依赖私有 Supabase 配置。
 - 如需启用 Pages 部署，在 GitHub 仓库 `Settings > Pages > Build and deployment` 中选择 `GitHub Actions`。
 
 ## Mock 账号
@@ -74,9 +100,32 @@ flutter run -d chrome --dart-define=APP_MODE=admin
 - `确认生效` 后需求变为已调度，车辆变为运行中，并进入实时位置监控。
 - 历史数据分析支持日/周/月切换，展示人次趋势、路线热度、收入和车辆利用率。
 
+## 期末提交入口
+
+- 最终报告：`docs/08_最终项目报告.md`
+- 项目计划：`docs/01_项目计划.md`
+- 需求文档：`docs/02_项目需求.md`
+- 设计文档：`docs/03_项目设计.md`
+- 源码说明：`docs/04_项目源码说明.md`
+- 测试文档：`docs/05_项目测试.md`
+- 配置管理：`docs/06_配置管理.md`
+- 工具标识：`docs/07_课程工具使用标识.md`
+- UML 说明：`docs/uml/README.md`
+
+## 最终提交前检查命令
+
+```bash
+flutter pub get
+dart format --set-exit-if-changed lib test
+flutter analyze
+flutter test
+flutter build web --release --dart-define=APP_MODE=admin
+```
+
 ## 项目报告
 
 - `docs/00_项目报告总览.md`：报告索引和完成情况总览。
+- `docs/08_最终项目报告.md`：期末提交总入口，串联计划、需求、设计、源码、测试、配置管理和工具标识。
 - `docs/01_项目计划.md`：项目计划、WBS、里程碑和甘特图。
 - `docs/02_项目需求.md`：需求说明、业务规则和用例。
 - `docs/03_项目设计.md`：架构设计、模块设计、数据模型和 UML。

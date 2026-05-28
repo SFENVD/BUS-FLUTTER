@@ -238,14 +238,17 @@ class _PassengerHomePageState extends ConsumerState<PassengerHomePage> {
                 ),
                 FilledButton(
                   key: const Key('confirm_booking'),
-                  onPressed: () {
-                    final result = ref
+                  onPressed: () async {
+                    final result = await ref
                         .read(passengerBookingProvider.notifier)
                         .createBooking(
                           userId: user.id,
                           tripId: trip.id,
                           seatNo: selectedSeat,
                         );
+                    if (!context.mounted) {
+                      return;
+                    }
                     Navigator.of(dialogContext).pop();
                     _showSnack(result.message);
                   },
@@ -293,7 +296,7 @@ class _PassengerHomePageState extends ConsumerState<PassengerHomePage> {
       return;
     }
 
-    final result = ref
+    final result = await ref
         .read(passengerBookingProvider.notifier)
         .cancelBooking(booking.id);
     _showSnack(result.message);
@@ -598,7 +601,7 @@ class _NotificationPanel extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'Mock 推送通知',
+                    '推送通知',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w900,
                     ),
@@ -614,7 +617,7 @@ class _NotificationPanel extends StatelessWidget {
             const SizedBox(height: 8),
             if (notifications.isEmpty)
               Text(
-                '预约、支付和信用变化会在这里生成 Mock 推送。',
+                '预约、支付和信用变化会在这里生成推送通知。',
                 style: TextStyle(color: colorScheme.onSurfaceVariant),
               )
             else
