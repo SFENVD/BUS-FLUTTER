@@ -856,7 +856,7 @@ Future<void> _loginWithMockCredential(
   expect(find.text('校车管理系统'), findsOneWidget);
   expect(find.text(loginTitle), findsOneWidget);
 
-  await tester.tap(find.byKey(Key('mock_${mode.value}_login')));
+  await tester.tap(find.byKey(Key('quick_${mode.value}_login')));
   await tester.pump();
   await tester.ensureVisible(find.byKey(const Key('login_submit')));
   await tester.pump();

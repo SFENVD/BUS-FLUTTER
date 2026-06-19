@@ -159,7 +159,7 @@ class _LoginIntro extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
-            'Mock 环境',
+            '在线服务',
             style: TextStyle(
               color: colorScheme.onPrimary,
               fontWeight: FontWeight.w800,
@@ -176,7 +176,7 @@ class _LoginIntro extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Text(
-          '当前入口：${mode.title}。可用 `--dart-define=APP_MODE=${mode.value}` 指定启动端，也可在下方直接切换演示入口。',
+          '当前入口：${mode.title}。可在下方切换不同角色入口，体验预约、调度和司机任务协同流程。',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
             color: colorScheme.onSurfaceVariant,
             height: 1.55,
@@ -186,7 +186,7 @@ class _LoginIntro extends StatelessWidget {
         const AppModeSwitcher(),
         const SizedBox(height: 22),
         Text(
-          'Mock 测试账号',
+          '快捷登录账号',
           style: Theme.of(
             context,
           ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
@@ -224,7 +224,7 @@ class _CredentialChip extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return ActionChip(
-      key: Key('mock_${credential.mode.value}_login'),
+      key: Key('quick_${credential.mode.value}_login'),
       avatar: CircleAvatar(
         backgroundColor: isSelected
             ? colorScheme.onPrimary
@@ -358,7 +358,7 @@ class _LoginForm extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  'Mock 默认密码：123456。账号角色必须与当前入口一致。',
+                  '默认密码：123456。账号角色必须与当前入口一致。',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,

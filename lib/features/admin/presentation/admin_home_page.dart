@@ -127,7 +127,7 @@ class _AdminSummary extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'P4 已接入车辆/司机管理、车次调度、实时监控和历史数据分析 Mock 流程。',
+            '统一管理车辆、司机、车次调度、实时监控和历史数据分析。',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: colorScheme.onPrimary.withValues(alpha: 0.86),
             ),
@@ -907,7 +907,7 @@ class _TrackingPanel extends ConsumerWidget {
                 Expanded(
                   child: _SectionTitle(
                     title: '实时位置监控',
-                    subtitle: 'Mock 地图展示在途车辆位置，点击标记查看车辆、司机和速度。',
+                    subtitle: '地图展示在途车辆位置，点击标记查看车辆、司机和速度。',
                   ),
                 ),
                 OutlinedButton.icon(
@@ -1187,7 +1187,7 @@ class _PassengerEtaPanel extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '根据 Mock 车辆位置估算预约客户与上车点的距离和到达时间。',
+            '根据车辆位置估算预约客户与上车点的距离和到达时间。',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),

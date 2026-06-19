@@ -132,10 +132,7 @@ class DriverTaskController extends Notifier<DriverTaskState> {
       _appendLocationUpdate();
     });
 
-    return const DriverActionResult(
-      success: true,
-      message: '已发车，Mock 位置将每 5 秒上报一次',
-    );
+    return const DriverActionResult(success: true, message: '已发车，位置将每 5 秒上报一次');
   }
 
   DriverActionResult completeActiveTask() {
