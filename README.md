@@ -53,7 +53,7 @@ Supabase 数据库脚本位于：
 - `supabase/migrations/202605110001_initial_schema.sql`
 - `supabase/seed/202605110001_seed_demo_data.sql`
 
-详细接入步骤见 `docs/08_Supabase_MVP接入计划.md`。
+详细接入步骤见 `docs/10_Supabase_MVP接入计划.md`。
 
 ## CI/CD
 
@@ -103,14 +103,16 @@ Supabase 数据库脚本位于：
 ## 期末提交入口
 
 - 最终报告：`docs/08_最终项目报告.md`
-- 项目计划：`docs/01_项目计划.md`
+- 项目计划：`docs/01_项目计划.docx`
 - 需求文档：`docs/02_项目需求.md`
-- 设计文档：`docs/03_项目设计.md`
+- 设计文档：`docs/03_项目设计.doc`
 - 源码说明：`docs/04_项目源码说明.md`
-- 测试文档：`docs/05_项目测试.md`
-- 配置管理：`docs/06_配置管理.md`
+- 测试计划：`docs/05_1_测试计划_司机端.docx`
+- 测试用例：`docs/05_2_测试用例_司机端.docx`
+- 测试报告：`docs/05_3_测试报告_司机端.docx`
+- 配置管理：`docs/06_配置管理.docx`
 - 工具标识：`docs/07_课程工具使用标识.md`
-- UML 说明：`docs/uml/README.md`
+- UML 说明：`docs/09_StarUML设计过程.md`
 
 ## 最终提交前检查命令
 
@@ -126,12 +128,14 @@ flutter build web --release --dart-define=APP_MODE=admin
 
 - `docs/00_项目报告总览.md`：报告索引和完成情况总览。
 - `docs/08_最终项目报告.md`：期末提交总入口，串联计划、需求、设计、源码、测试、配置管理和工具标识。
-- `docs/01_项目计划.md`：项目计划、WBS、里程碑和甘特图。
+- `docs/01_项目计划.docx`：项目计划、WBS、里程碑和甘特图。
 - `docs/02_项目需求.md`：需求说明、业务规则和用例。
-- `docs/03_项目设计.md`：架构设计、模块设计、数据模型和 UML。
+- `docs/03_项目设计.doc`：架构设计、模块设计、数据模型和 UML。
 - `docs/04_项目源码说明.md`：源码结构、运行方式和功能映射。
-- `docs/05_项目测试.md`：测试计划、测试用例和测试报告。
-- `docs/06_配置管理.md`：Git、依赖、基线和交付配置管理。
+- `docs/05_1_测试计划_司机端.docx`：司机端测试计划。
+- `docs/05_2_测试用例_司机端.docx`：司机端测试用例。
+- `docs/05_3_测试报告_司机端.docx`：司机端测试报告。
+- `docs/06_配置管理.docx`：Git、依赖、基线和交付配置管理。
 - `docs/07_课程工具使用标识.md`：课程工具使用痕迹汇总。
 
 ## P5 支付、信用和推送 Mock 说明
