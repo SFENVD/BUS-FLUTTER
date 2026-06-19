@@ -53,7 +53,7 @@
 
 **关键关系**：
 - `<<include>>`：预约车次→查看车次、取消预约→信用等级、选座→预约车次
-- `<<extend>>`：共享位置→查看任务、AI调度→人工调度、支付→预约、通知→取消
+- `<<extend>>`：共享位置→查看任务、智能调度→人工调度、支付→预约、通知→取消
 
 ![设计过程-用例图](uml/images/process_usecase.png)
 
@@ -130,7 +130,7 @@
 
 ### 3.5 部署图（×1）
 
-**设计依据**：技术方案 §一 技术栈、源码 `supabase/` 配置
+**设计依据**：技术方案 §一 技术栈、三端部署结构
 
 **作图步骤**：
 
@@ -141,8 +141,8 @@
 
 **节点分组**：
 - 客户端层：普通用户手机、司机手机、管理员PC浏览器
-- 云服务层：应用服务器、PostgreSQL、认证服务、WebSocket服务
-- 第三方层：微信支付/支付宝、推送通知FCM
+- 应用层：Flutter 应用、业务数据仓库、认证模块、位置同步模块
+- 第三方层：微信支付/支付宝、推送通知服务
 - CI/CD层：GitHub Actions
 
 ![设计过程-部署图](uml/images/process_deployment.png)
@@ -167,7 +167,7 @@
 
 **数据层架构**：
 - 模型层：CoreModels 聚合 9 个数据模型
-- 仓库层：Mock×3 + Supabase×3，双后端可切换
+- 仓库层：Auth、Passenger、Driver、Admin 数据仓库
 - 引导层：BackendBootstrap 统一管理初始化
 
 ![设计过程-组件图](uml/images/process_component.png)
