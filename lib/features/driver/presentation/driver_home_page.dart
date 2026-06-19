@@ -78,7 +78,7 @@ class DriverHomePage extends ConsumerWidget {
                   const SizedBox(height: 28),
                   _SectionTitle(
                     title: '今日派车任务',
-                    subtitle: '查看路线、发车时间、乘客名单和上车点，发车后自动开启 Mock 位置共享。',
+                    subtitle: '查看路线、发车时间、乘客名单和上车点，发车后自动开启位置共享。',
                   ),
                   const SizedBox(height: 12),
                   _TaskList(tasks: driverState.tasks),
@@ -124,7 +124,7 @@ class _DriverSummary extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'P2 已接入派车任务、乘客名单、统计看板和 5 秒 Mock 位置上报。',
+            '已接入派车任务、乘客名单、统计看板和 5 秒位置上报。',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: colorScheme.onPrimary.withValues(alpha: 0.86),
             ),

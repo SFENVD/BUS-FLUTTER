@@ -428,7 +428,7 @@ class _PassengerSummary extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'P5 已接入预约、Mock 支付、信用等级和推送通知流程。',
+            '已接入预约、支付、信用等级和通知流程。',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: colorScheme.onPrimary.withValues(alpha: 0.86),
             ),

@@ -187,7 +187,7 @@ class _LoginIntro extends StatelessWidget {
         const AppModeSwitcher(),
         const SizedBox(height: 22),
         Text(
-          'Mock 测试账号',
+          '演示账号',
           style: Theme.of(
             context,
           ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
@@ -359,7 +359,7 @@ class _LoginForm extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  'Mock 默认密码：123456。账号角色必须与当前入口一致。',
+                  '演示账号默认密码：123456。账号角色必须与当前入口一致。',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,

@@ -155,7 +155,7 @@ class DriverTaskController extends Notifier<DriverTaskState> {
 
     return const DriverActionResult(
       success: true,
-      message: '已发车，Mock 位置将每 5 秒上报一次',
+      message: '已发车，位置将每 5 秒上报一次',
     );
   }
 

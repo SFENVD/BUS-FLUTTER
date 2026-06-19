@@ -417,7 +417,7 @@ void main() {
   });
 
   group('DriverTaskState 单元测试', () {
-    final mockTasks = [
+    final demoTasks = [
       DriverTaskModel(
         id: 'task-001',
         tripNo: 'T-001',
@@ -479,7 +479,7 @@ void main() {
       ),
     ];
 
-    final mockStats = [
+    final demoStats = [
       const DriverStats(
         period: '日',
         totalTrips: 5,
@@ -498,8 +498,8 @@ void main() {
 
     test('pendingTaskCount 返回待发车任务数量', () {
       final state = DriverTaskState(
-        tasks: mockTasks,
-        stats: mockStats,
+        tasks: demoTasks,
+        stats: demoStats,
         selectedStatsPeriod: '日',
         locationUpdates: const [],
       );
@@ -509,8 +509,8 @@ void main() {
 
     test('todayPassengerCount 返回所有乘客总数', () {
       final state = DriverTaskState(
-        tasks: mockTasks,
-        stats: mockStats,
+        tasks: demoTasks,
+        stats: demoStats,
         selectedStatsPeriod: '日',
         locationUpdates: const [],
       );
@@ -520,8 +520,8 @@ void main() {
 
     test('activeTask 返回当前活动任务', () {
       final state = DriverTaskState(
-        tasks: mockTasks,
-        stats: mockStats,
+        tasks: demoTasks,
+        stats: demoStats,
         selectedStatsPeriod: '日',
         locationUpdates: const [],
         activeTaskId: 'task-002',
@@ -534,8 +534,8 @@ void main() {
 
     test('activeTask 在没有活动任务时返回 null', () {
       final state = DriverTaskState(
-        tasks: mockTasks,
-        stats: mockStats,
+        tasks: demoTasks,
+        stats: demoStats,
         selectedStatsPeriod: '日',
         locationUpdates: const [],
       );
@@ -545,8 +545,8 @@ void main() {
 
     test('selectedStats 返回当前选中的统计数据', () {
       final state = DriverTaskState(
-        tasks: mockTasks,
-        stats: mockStats,
+        tasks: demoTasks,
+        stats: demoStats,
         selectedStatsPeriod: '周',
         locationUpdates: const [],
       );
@@ -577,8 +577,8 @@ void main() {
       ];
 
       final state = DriverTaskState(
-        tasks: mockTasks,
-        stats: mockStats,
+        tasks: demoTasks,
+        stats: demoStats,
         selectedStatsPeriod: '日',
         locationUpdates: updates,
       );
@@ -589,8 +589,8 @@ void main() {
 
     test('latestLocation 在没有上报时返回 null', () {
       final state = DriverTaskState(
-        tasks: mockTasks,
-        stats: mockStats,
+        tasks: demoTasks,
+        stats: demoStats,
         selectedStatsPeriod: '日',
         locationUpdates: const [],
       );
@@ -600,21 +600,21 @@ void main() {
 
     test('copyWith 正确更新字段', () {
       final state = DriverTaskState(
-        tasks: mockTasks,
-        stats: mockStats,
+        tasks: demoTasks,
+        stats: demoStats,
         selectedStatsPeriod: '日',
         locationUpdates: const [],
       );
 
       final updated = state.copyWith(selectedStatsPeriod: '周');
       expect(updated.selectedStatsPeriod, '周');
-      expect(updated.tasks, mockTasks);
+      expect(updated.tasks, demoTasks);
     });
 
     test('copyWith 的 clearActiveTask 参数可清除活动任务', () {
       final state = DriverTaskState(
-        tasks: mockTasks,
-        stats: mockStats,
+        tasks: demoTasks,
+        stats: demoStats,
         selectedStatsPeriod: '日',
         locationUpdates: const [],
         activeTaskId: 'task-002',
@@ -842,7 +842,7 @@ Future<void> _pumpDriverApp(WidgetTester tester) async {
 }
 
 Future<void> _loginAsDriver(WidgetTester tester) async {
-  await _loginWithMockCredential(
+  await _loginWithDemoCredential(
     tester,
     mode: AppMode.driver,
     loginTitle: '司机端登录',
@@ -860,7 +860,7 @@ Future<void> _pumpApp(WidgetTester tester, AppMode mode) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _loginWithMockCredential(
+Future<void> _loginWithDemoCredential(
   WidgetTester tester, {
   required AppMode mode,
   required String loginTitle,

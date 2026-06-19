@@ -6,7 +6,7 @@ import 'package:school_bus_app/core/models/app_mode.dart';
 import 'package:school_bus_app/core/providers/app_mode_provider.dart';
 
 void main() {
-  testWidgets('passenger mock login opens passenger workspace', (tester) async {
+  testWidgets('passenger demo login opens passenger workspace', (tester) async {
     await _pumpPassengerApp(tester);
     await _loginAsPassenger(tester);
 
@@ -77,9 +77,9 @@ void main() {
     expect(find.text('支付成功'), findsWidgets);
   });
 
-  testWidgets('driver can start task and report mock location', (tester) async {
+  testWidgets('driver can start task and report location', (tester) async {
     await _pumpApp(tester, AppMode.driver);
-    await _loginWithMockCredential(
+    await _loginWithDemoCredential(
       tester,
       mode: AppMode.driver,
       loginTitle: '司机端登录',
@@ -114,7 +114,7 @@ void main() {
 
   testWidgets('admin can manage vehicles drivers and tracking', (tester) async {
     await _pumpApp(tester, AppMode.admin);
-    await _loginWithMockCredential(
+    await _loginWithDemoCredential(
       tester,
       mode: AppMode.admin,
       loginTitle: '后台管理端登录',
@@ -173,7 +173,7 @@ void main() {
     await tester.tap(find.byKey(const Key('generate_ai_dispatch')));
     await tester.pumpAndSettle();
 
-    expect(find.text('AI 推荐'), findsOneWidget);
+    expect(find.text('智能推荐'), findsOneWidget);
 
     await tester.ensureVisible(
       find.byKey(const Key('confirm_first_dispatch_plan')),
@@ -216,7 +216,7 @@ Future<void> _pumpPassengerApp(WidgetTester tester) async {
 }
 
 Future<void> _loginAsPassenger(WidgetTester tester) async {
-  await _loginWithMockCredential(
+  await _loginWithDemoCredential(
     tester,
     mode: AppMode.passenger,
     loginTitle: '普通用户端登录',
@@ -234,7 +234,7 @@ Future<void> _pumpApp(WidgetTester tester, AppMode mode) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _loginWithMockCredential(
+Future<void> _loginWithDemoCredential(
   WidgetTester tester, {
   required AppMode mode,
   required String loginTitle,

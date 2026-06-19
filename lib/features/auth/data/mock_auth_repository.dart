@@ -65,12 +65,12 @@ class MockAuthRepository implements AuthRepository {
       (item) => item.user.phone == normalizedPhone,
     );
     if (credential.isEmpty) {
-      throw const AuthException('Mock 用户不存在，请使用页面提供的测试账号');
+      throw const AuthException('用户不存在，请使用页面提供的演示账号');
     }
 
     final matchedCredential = credential.first;
     if (matchedCredential.password != password) {
-      throw const AuthException('密码错误，Mock 默认密码为 123456');
+      throw const AuthException('密码错误，演示账号默认密码为 123456');
     }
 
     if (matchedCredential.user.role != mode.role) {
