@@ -291,9 +291,7 @@ void main() {
       await tester.tap(find.byKey(const Key('start_task_task-001')));
       await tester.pumpAndSettle();
 
-      await tester.ensureVisible(
-        find.byKey(const Key('complete_active_task')),
-      );
+      await tester.ensureVisible(find.byKey(const Key('complete_active_task')));
       await tester.tap(find.byKey(const Key('complete_active_task')));
       await tester.pumpAndSettle();
 
@@ -309,9 +307,7 @@ void main() {
       await tester.tap(find.byKey(const Key('start_task_task-001')));
       await tester.pumpAndSettle();
 
-      await tester.ensureVisible(
-        find.byKey(const Key('complete_active_task')),
-      );
+      await tester.ensureVisible(find.byKey(const Key('complete_active_task')));
       await tester.tap(find.byKey(const Key('complete_active_task')));
       await tester.pumpAndSettle();
 
@@ -329,9 +325,7 @@ void main() {
       await tester.tap(find.byKey(const Key('start_task_task-001')));
       await tester.pumpAndSettle();
 
-      await tester.ensureVisible(
-        find.byKey(const Key('complete_active_task')),
-      );
+      await tester.ensureVisible(find.byKey(const Key('complete_active_task')));
       await tester.tap(find.byKey(const Key('complete_active_task')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
@@ -385,9 +379,7 @@ void main() {
       await tester.tap(find.byKey(const Key('start_task_task-001')));
       await tester.pumpAndSettle();
 
-      await tester.ensureVisible(
-        find.byKey(const Key('complete_active_task')),
-      );
+      await tester.ensureVisible(find.byKey(const Key('complete_active_task')));
       await tester.tap(find.byKey(const Key('complete_active_task')));
       await tester.pumpAndSettle();
 
@@ -402,9 +394,7 @@ void main() {
       await tester.tap(find.byKey(const Key('start_task_task-001')));
       await tester.pumpAndSettle();
 
-      await tester.ensureVisible(
-        find.byKey(const Key('complete_active_task')),
-      );
+      await tester.ensureVisible(find.byKey(const Key('complete_active_task')));
       await tester.tap(find.byKey(const Key('complete_active_task')));
       await tester.pumpAndSettle();
 
@@ -628,9 +618,7 @@ void main() {
   group('DriverTaskController 单元测试', () {
     ProviderContainer createContainer() {
       return ProviderContainer(
-        overrides: [
-          initialAppModeProvider.overrideWithValue(AppMode.driver),
-        ],
+        overrides: [initialAppModeProvider.overrideWithValue(AppMode.driver)],
       );
     }
 

@@ -1,25 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
-import '../../../core/config/backend_config.dart';
 import '../../../core/models/admin_driver_model.dart';
 import '../../../core/models/analytics_model.dart';
 import '../../../core/models/dispatch_model.dart';
 import '../../../core/models/vehicle_location_model.dart';
 import '../../../core/models/vehicle_model.dart';
 import '../data/mock_admin_repository.dart';
-import '../data/supabase_admin_repository.dart';
 
 final mockAdminRepositoryProvider = Provider<MockAdminRepository>((ref) {
   return MockAdminRepository();
-});
-
-final supabaseAdminRepositoryProvider = Provider<SupabaseAdminRepository>((
-  ref,
-) {
-  return SupabaseAdminRepository(Supabase.instance.client);
 });
 
 final adminProvider = NotifierProvider<AdminController, AdminState>(
@@ -188,10 +179,6 @@ class AdminController extends Notifier<AdminState> {
       selectedVehicleId: locations.firstOrNull?.vehicleId,
     );
 
-    if (BackendConfig.useSupabase) {
-      unawaited(_loadSupabaseSnapshot());
-    }
-
     return initialState;
   }
 
@@ -217,9 +204,6 @@ class AdminController extends Notifier<AdminState> {
       status: status,
     );
     state = state.copyWith(vehicles: [vehicle, ...state.vehicles]);
-    if (BackendConfig.useSupabase) {
-      unawaited(_persistAddVehicle(vehicle));
-    }
     return const AdminActionResult(success: true, message: '车辆已新增');
   }
 
@@ -243,9 +227,6 @@ class AdminController extends Notifier<AdminState> {
     final nextVehicles = [...state.vehicles];
     nextVehicles[index] = updatedVehicle;
     state = state.copyWith(vehicles: nextVehicles);
-    if (BackendConfig.useSupabase) {
-      unawaited(_persistUpdateVehicle(updatedVehicle));
-    }
     return const AdminActionResult(success: true, message: '车辆已更新');
   }
 
@@ -274,9 +255,6 @@ class AdminController extends Notifier<AdminState> {
       locations: nextLocations,
       clearSelectedVehicle: state.selectedVehicleId == vehicleId,
     );
-    if (BackendConfig.useSupabase) {
-      unawaited(_persistDeleteVehicle(vehicleId));
-    }
     return const AdminActionResult(success: true, message: '车辆已删除');
   }
 
@@ -308,9 +286,6 @@ class AdminController extends Notifier<AdminState> {
       boundVehicleId: boundVehicleId,
     );
     state = state.copyWith(drivers: [driver, ...state.drivers]);
-    if (BackendConfig.useSupabase) {
-      unawaited(_persistAddDriver(driver));
-    }
     return const AdminActionResult(success: true, message: '司机已新增');
   }
 
@@ -341,9 +316,6 @@ class AdminController extends Notifier<AdminState> {
     final nextDrivers = [...state.drivers];
     nextDrivers[index] = updatedDriver;
     state = state.copyWith(drivers: nextDrivers);
-    if (BackendConfig.useSupabase) {
-      unawaited(_persistUpdateDriver(updatedDriver));
-    }
     return const AdminActionResult(success: true, message: '司机已更新');
   }
 
@@ -359,9 +331,6 @@ class AdminController extends Notifier<AdminState> {
     state = state.copyWith(
       drivers: state.drivers.where((item) => item.id != driverId).toList(),
     );
-    if (BackendConfig.useSupabase) {
-      unawaited(_persistDeleteDriver(driverId));
-    }
     return const AdminActionResult(success: true, message: '司机已删除');
   }
 
@@ -370,7 +339,6 @@ class AdminController extends Notifier<AdminState> {
   }
 
   void simulateLocationTick() {
-    final changedLocations = <VehicleLocationModel>[];
     final nextLocations = state.locations.map((location) {
       final vehicle = state.vehicleById(location.vehicleId);
       if (vehicle?.status != VehicleStatus.running) {
@@ -384,14 +352,10 @@ class AdminController extends Notifier<AdminState> {
         speed: 24 + seed * 4,
         updatedAt: DateTime.now(),
       );
-      changedLocations.add(nextLocation);
       return nextLocation;
     }).toList();
 
     state = state.copyWith(locations: nextLocations);
-    if (BackendConfig.useSupabase) {
-      unawaited(_persistVehicleLocations(changedLocations));
-    }
   }
 
   void selectAnalyticsPeriod(AnalyticsPeriod period) {
@@ -443,23 +407,12 @@ class AdminController extends Notifier<AdminState> {
       );
     }
 
-    var plansToApply = nextPlans;
-    if (BackendConfig.useSupabase) {
-      try {
-        plansToApply = await ref
-            .read(supabaseAdminRepositoryProvider)
-            .createDispatchPlans(nextPlans);
-      } catch (_) {
-        return const AdminActionResult(success: false, message: 'AI 调度建议保存失败');
-      }
-    }
-
     state = state.copyWith(
-      dispatchPlans: [...state.confirmedDispatchPlans, ...plansToApply],
+      dispatchPlans: [...state.confirmedDispatchPlans, ...nextPlans],
     );
     return AdminActionResult(
       success: true,
-      message: '已生成 ${plansToApply.length} 条 AI 调度建议',
+      message: '已生成 ${nextPlans.length} 条 AI 调度建议',
     );
   }
 
@@ -490,22 +443,12 @@ class AdminController extends Notifier<AdminState> {
       return const AdminActionResult(success: false, message: '车辆座位数不足');
     }
 
-    var plan = _buildDispatchPlan(
+    final plan = _buildDispatchPlan(
       demand: demand,
       vehicle: vehicle,
       driver: driver,
       isAiGenerated: false,
     );
-    if (BackendConfig.useSupabase) {
-      try {
-        final persistedPlans = await ref
-            .read(supabaseAdminRepositoryProvider)
-            .createDispatchPlans([plan]);
-        plan = persistedPlans.firstOrNull ?? plan;
-      } catch (_) {
-        return const AdminActionResult(success: false, message: '人工调度方案保存失败');
-      }
-    }
 
     state = state.copyWith(
       dispatchPlans: [
@@ -582,29 +525,6 @@ class AdminController extends Notifier<AdminState> {
       updatedAt: DateTime.now(),
     );
 
-    if (BackendConfig.useSupabase) {
-      try {
-        final snapshot = await ref
-            .read(supabaseAdminRepositoryProvider)
-            .confirmDispatchPlan(
-              plan: plan,
-              location: location,
-              shouldBindDriver: driver.boundVehicleId == null,
-            );
-        state = state.copyWith(
-          vehicles: snapshot.vehicles,
-          drivers: snapshot.drivers,
-          dispatchDemands: snapshot.dispatchDemands,
-          dispatchPlans: snapshot.dispatchPlans,
-          locations: snapshot.locations,
-          selectedVehicleId: plan.vehicleId,
-        );
-        return const AdminActionResult(success: true, message: '调度方案已确认并生效');
-      } catch (_) {
-        return const AdminActionResult(success: false, message: '调度方案确认失败');
-      }
-    }
-
     state = state.copyWith(
       vehicles: nextVehicles,
       drivers: nextDrivers,
@@ -675,90 +595,6 @@ class AdminController extends Notifier<AdminState> {
       isAiGenerated: isAiGenerated,
       isConfirmed: false,
     );
-  }
-
-  Future<void> _loadSupabaseSnapshot() async {
-    try {
-      final snapshot = await ref
-          .read(supabaseAdminRepositoryProvider)
-          .fetchSnapshot();
-      state = state.copyWith(
-        vehicles: snapshot.vehicles,
-        drivers: snapshot.drivers,
-        locations: snapshot.locations,
-        dispatchDemands: snapshot.dispatchDemands,
-        dispatchPlans: snapshot.dispatchPlans,
-        selectedVehicleId: snapshot.locations.firstOrNull?.vehicleId,
-      );
-    } catch (_) {
-      // Keep Mock state visible if Supabase is unreachable.
-    }
-  }
-
-  Future<void> _persistAddVehicle(VehicleModel vehicle) async {
-    try {
-      await ref
-          .read(supabaseAdminRepositoryProvider)
-          .addVehicle(
-            plateNo: vehicle.plateNo,
-            model: vehicle.model,
-            seatCount: vehicle.seatCount,
-            status: vehicle.status,
-          );
-      await _loadSupabaseSnapshot();
-    } catch (_) {}
-  }
-
-  Future<void> _persistUpdateVehicle(VehicleModel vehicle) async {
-    try {
-      await ref.read(supabaseAdminRepositoryProvider).updateVehicle(vehicle);
-      await _loadSupabaseSnapshot();
-    } catch (_) {}
-  }
-
-  Future<void> _persistDeleteVehicle(String vehicleId) async {
-    try {
-      await ref.read(supabaseAdminRepositoryProvider).deleteVehicle(vehicleId);
-      await _loadSupabaseSnapshot();
-    } catch (_) {}
-  }
-
-  Future<void> _persistAddDriver(AdminDriverModel driver) async {
-    try {
-      await ref
-          .read(supabaseAdminRepositoryProvider)
-          .addDriver(
-            name: driver.name,
-            phone: driver.phone,
-            licenseNo: driver.licenseNo,
-            boundVehicleId: driver.boundVehicleId,
-          );
-      await _loadSupabaseSnapshot();
-    } catch (_) {}
-  }
-
-  Future<void> _persistUpdateDriver(AdminDriverModel driver) async {
-    try {
-      await ref.read(supabaseAdminRepositoryProvider).updateDriver(driver);
-      await _loadSupabaseSnapshot();
-    } catch (_) {}
-  }
-
-  Future<void> _persistDeleteDriver(String driverId) async {
-    try {
-      await ref.read(supabaseAdminRepositoryProvider).deleteDriver(driverId);
-      await _loadSupabaseSnapshot();
-    } catch (_) {}
-  }
-
-  Future<void> _persistVehicleLocations(
-    List<VehicleLocationModel> locations,
-  ) async {
-    try {
-      await ref
-          .read(supabaseAdminRepositoryProvider)
-          .insertVehicleLocations(locations);
-    } catch (_) {}
   }
 }
 

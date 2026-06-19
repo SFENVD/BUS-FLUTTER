@@ -1,13 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
 import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/data/auth_state.dart';
 import '../../features/auth/data/mock_auth_repository.dart';
-import '../../features/auth/data/supabase_auth_repository.dart';
-import '../config/backend_config.dart';
 import '../models/app_mode.dart';
 
 final mockAuthRepositoryProvider = Provider<MockAuthRepository>((ref) {
@@ -15,9 +12,6 @@ final mockAuthRepositoryProvider = Provider<MockAuthRepository>((ref) {
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  if (BackendConfig.useSupabase) {
-    return SupabaseAuthRepository(Supabase.instance.client);
-  }
   return ref.watch(mockAuthRepositoryProvider);
 });
 

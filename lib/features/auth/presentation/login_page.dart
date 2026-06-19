@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/config/backend_config.dart';
 import '../../../core/models/app_mode.dart';
 import '../../../core/providers/app_mode_provider.dart';
 import '../../../core/providers/auth_provider.dart';
@@ -160,7 +159,7 @@ class _LoginIntro extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
-            '${BackendConfig.activeBackendLabel} 环境',
+            'Mock 环境',
             style: TextStyle(
               color: colorScheme.onPrimary,
               fontWeight: FontWeight.w800,
