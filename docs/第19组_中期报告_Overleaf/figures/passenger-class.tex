@@ -1,0 +1,12 @@
+\begin{figure}[H]\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[box,text width=5.9cm] (trip) at (0,0) {\textbf{TripModel}\par\rule{5.7cm}{0.3pt}\par\code{id, departureTime, totalSeats}\par\code{bookedSeats, fare, status}\par\code{isBookable}};
+\node[box,text width=5.9cm] (user) at (7.3,0) {\textbf{UserModel}\par\rule{5.7cm}{0.3pt}\par\code{id, name, phone}\par\code{role, creditScore}\par 用户身份与信用状态};
+\node[box,text width=5.9cm] (booking) at (0,-4.0) {\textbf{BookingModel}\par\rule{5.7cm}{0.3pt}\par\code{id, userId, tripId, seatNo}\par\code{status, fare, paymentStatus}\par\code{isActive, canPay, copyWith()}};
+\node[box,text width=5.9cm] (pay) at (7.3,-4.0) {\textbf{PaymentModel}\par\rule{5.7cm}{0.3pt}\par\code{id, bookingId, amount}\par\code{method, status}\par\code{createdAt, completedAt}};
+\draw (trip.south)--node[font=\scriptsize,right,pos=.15]{1}node[font=\scriptsize,right,pos=.85]{0..*}(booking.north);
+\draw (user.south)--node[font=\scriptsize,right,pos=.15]{1}node[font=\scriptsize,right,pos=.85]{0..*}(booking.north east);
+\draw (booking.east)--node[font=\scriptsize,above]{1\quad 0..*}(pay.west);
+\end{tikzpicture}
+\caption{乘客预约核心类模型（字段节选，关联通过标识保存）}\label{fig:passenger-class}
+\end{figure}

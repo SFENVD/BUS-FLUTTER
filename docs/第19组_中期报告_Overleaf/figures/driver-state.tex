@@ -1,0 +1,16 @@
+\begin{figure}[H]\centering
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small]
+\node[circle,fill=black,minimum size=5pt,inner sep=0] (s) at (-1,0) {};
+\node[state,text width=2.6cm] (p) at (1.5,0) {待发车\par pending};
+\node[state,text width=2.6cm] (r) at (6.5,0) {行程中\par running};
+\node[state,text width=2.6cm] (c) at (11.5,0) {已完成\par completed};
+\draw[flow] (s)--(p);
+\draw[flow] (p)--node[smalllabel,above,align=center]{开始任务\\无活动任务}(r);
+\draw[flow] (r)--node[smalllabel,above]{到站完成}(c);
+\node[box,text width=4.8cm,align=center] (timer) at (6.5,-2.4) {进入时：立即生成位置\par 运行时：每5秒追加记录\par 离开时：取消定时器};
+\draw[dashed] (r)--(timer);
+\node[box,text width=3.0cm,align=center] at (0.7,-2.4) {已有活动任务：拒绝开始\par 任务不存在：返回错误};
+\node[box,text width=2.5cm,align=center] at (11.8,-2.4) {已完成任务\par 不可再次发车};
+\end{tikzpicture}
+\caption{司机任务状态及位置定时器生命周期}\label{fig:driver-state}
+\end{figure}

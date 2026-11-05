@@ -1,0 +1,12 @@
+\begin{figure}[H]\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[box,text width=5.9cm] (task) at (0,0) {\textbf{DriverTaskModel}\par\rule{5.7cm}{0.3pt}\par\code{id, tripNo, vehicleId, driverId}\par\code{routeName, departureTime}\par\code{passengers, status}};
+\node[box,text width=5.9cm] (pickup) at (7.3,0) {\textbf{PassengerPickup}\par\rule{5.7cm}{0.3pt}\par\code{name, phoneSuffix}\par\code{pickupPoint, seatNo}};
+\node[box,text width=5.9cm] (state) at (0,-4.0) {\textbf{DriverTaskState}\par\rule{5.7cm}{0.3pt}\par\code{tasks, activeTaskId?}\par\code{locationUpdates, stats}\par\code{latestLocation, activeTask}};
+\node[box,text width=5.9cm] (loc) at (7.3,-4.0) {\textbf{LocationUpdate}\par\rule{5.7cm}{0.3pt}\par\code{vehicleId, lat, lng}\par\code{speed, timestamp}};
+\draw (task.east)--node[font=\scriptsize,above]{1\quad 0..*}(pickup.west);
+\draw (state.north)--node[font=\scriptsize,left,pos=.2]{1}node[font=\scriptsize,left,pos=.8]{0..*}(task.south);
+\draw (state.east)--node[font=\scriptsize,above]{1\quad 0..*}(loc.west);
+\end{tikzpicture}
+\caption{司机任务与位置记录类模型（字段节选）}\label{fig:driver-class}
+\end{figure}
