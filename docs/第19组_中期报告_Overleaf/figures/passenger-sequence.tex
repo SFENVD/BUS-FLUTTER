@@ -1,0 +1,17 @@
+\begin{figure}[H]\centering
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small]
+\node[box,align=center,text width=1.35cm] (u) at (0,0) {乘客};
+\node[box,align=center,text width=2cm] (ui) at (3.0,0) {预约页面};
+\node[box,align=center,text width=2.8cm] (c) at (7.0,0) {预约控制器};
+\node[box,align=center,text width=2.0cm] (n) at (11.5,0) {本地通知状态};
+\foreach \a in {u,ui,c,n} \draw[lifeline] (\a.south)--+(0,-6.8);
+\draw[flow] (0,-1)--node[above,smalllabel]{选座并确认}(3,-1);
+\draw[flow] (3,-2)--node[above,smalllabel]{createBooking(...)}(7,-2);
+\draw[flow] (7,-2.55)--(7.8,-2.55)--node[right,font=\footnotesize,align=left]{校验车次、容量、\\重复预约、座位}(7.8,-3.5)--(7,-3.5);
+\node[box,text width=5.6cm,font=\footnotesize,align=center] at (3.0,-4.0) {校验失败：返回原因，页面提示，不新增预约};
+\draw[flow] (7,-4.8)--(8,-4.8)--node[right,font=\footnotesize]{创建预约并替换状态}(8,-5.4)--(7,-5.4);
+\draw[flow] (7,-5.85)--node[above,smalllabel]{push 预约通知}(11.5,-5.85);
+\draw[flow,dashed] (7,-6.6)--node[above,smalllabel]{返回操作结果 / 状态变化刷新 UI}(3,-6.6);
+\end{tikzpicture}
+\caption{预约创建的关键交互顺序}\label{fig:passenger-sequence}
+\end{figure}

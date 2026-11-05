@@ -1,0 +1,13 @@
+\begin{figure}[H]\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[box,text width=5.9cm] (demand) at (0,0) {\textbf{DispatchDemandModel}\par\rule{5.7cm}{0.3pt}\par\code{id, routeName, passengerCount}\par\code{departureTime, status}};
+\node[box,text width=5.9cm] (plan) at (7.3,0) {\textbf{DispatchPlanModel}\par\rule{5.7cm}{0.3pt}\par\code{demandId, vehicleId, driverId}\par\code{loadRate, isConfirmed}\par\code{isAiGenerated}};
+\node[box,text width=5.9cm] (v) at (0,-4.0) {\textbf{VehicleModel}\par\rule{5.7cm}{0.3pt}\par\code{id, plateNo, model}\par\code{seatCount, status}};
+\node[box,text width=5.9cm] (dr) at (7.3,-4.0) {\textbf{AdminDriverModel}\par\rule{5.7cm}{0.3pt}\par\code{id, name, phone, licenseNo}\par\code{boundVehicleId?}};
+\draw (demand.east)--node[font=\scriptsize,above]{1\quad 0..*}(plan.west);
+\draw (plan.south west)--node[font=\scriptsize,above,sloped,pos=.25]{0..*}node[font=\scriptsize,above,sloped,pos=.85]{1}(v.north east);
+\draw (plan.south)--node[font=\scriptsize,right,pos=.2]{0..*}node[font=\scriptsize,right,pos=.8]{1}(dr.north);
+\draw[dashed] (v.east)--node[font=\scriptsize,above]{绑定}(dr.west);
+\end{tikzpicture}
+\caption{后台调度核心类模型（历史方案可多次引用资源）}\label{fig:dispatch-class}
+\end{figure}

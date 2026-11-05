@@ -1,0 +1,84 @@
+% !TeX program = xelatex
+% Overleaf: main document main.tex, compiler XeLaTeX.
+\documentclass[UTF8,fontset=fandol,zihao=-4,a4paper,oneside]{ctexart}
+\usepackage[left=2.54cm,right=2.54cm,top=2.40cm,bottom=2.40cm,headheight=15pt,headsep=0.6cm]{geometry}
+\usepackage{graphicx,array,tabularx,longtable,multirow,booktabs}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,calc,shapes.geometric}
+\usepackage{enumitem,float,caption,fancyhdr,needspace,fvextra,xurl}
+\usepackage[unicode,hidelinks,hypertexnames=false]{hyperref}
+\hypersetup{pdftitle={第19组 校车管理系统中期报告},pdfauthor={许盛凯、赵凯彭},pdfsubject={现代软件工程课程设计}}
+\setCJKfamilyfont{zhkai}[AutoFakeBold=2]{FandolKai-Regular.otf}
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0pt}
+\linespread{1.35}
+\setlength{\emergencystretch}{2em}
+\setlist{nosep,leftmargin=2em,topsep=3pt}
+\ctexset{
+ section={format=\songti\bfseries\zihao{-3},beforeskip=12pt,afterskip=8pt},
+ subsection={format=\heiti\bfseries\zihao{4},beforeskip=10pt,afterskip=6pt},
+ subsubsection={format=\kaishu\bfseries\zihao{-4},beforeskip=8pt,afterskip=5pt},
+ contentsname={目\quad 录}}
+\setcounter{tocdepth}{3}
+\setcounter{secnumdepth}{3}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\songti\zihao{5}《现代软件工程课程设计》中期报告}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+\DeclareCaptionFont{cns}{\zihao{5}\heiti}
+\captionsetup{font=cns,labelfont=normalfont,labelsep=quad,skip=6pt}
+\counterwithin{table}{section}
+\counterwithin{figure}{section}
+\renewcommand{\thetable}{\thesection.\arabic{table}}
+\renewcommand{\thefigure}{\thesection.\arabic{figure}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.28}
+\newcommand{\code}[1]{{\small\texttt{\nolinkurl{#1}}}}
+\newcommand{\owner}[1]{\noindent\textbf{责任人：}#1\par}
+\newcommand{\ReportDate}{2026 年 11 月 4 日}
+% Group member student ID.
+\newcommand{\ZhaoStudentId}{2023141230156}
+\DefineVerbatimEnvironment{source}{Verbatim}{fontsize=\footnotesize,breaklines=true,breakanywhere=true,frame=single,framesep=5pt,baselinestretch=1.05}
+\tikzset{box/.style={draw,rectangle,align=left,inner sep=5pt,font=\small},
+ state/.style={draw,rounded corners=5pt,align=center,inner sep=7pt,font=\small},
+ flow/.style={-{Stealth[length=2mm]},semithick},
+ lifeline/.style={dashed,gray},
+ smalllabel/.style={font=\footnotesize,fill=white,inner sep=2pt}}
+\begin{document}
+\begin{titlepage}
+\thispagestyle{empty}
+\centering
+\vspace*{1.8cm}
+{\songti\bfseries\fontsize{24}{34}\selectfont《现代软件工程课程设计》\par 中期报告\par}
+\vspace{1.0cm}
+{\heiti\zihao{2}校车管理系统\par}
+\vspace{2.3cm}
+{\zihao{4}
+\begin{tabular}{|>{\centering\arraybackslash}p{3.0cm}|>{\centering\arraybackslash}p{5.4cm}|>{\centering\arraybackslash}p{3.3cm}|}
+\hline
+小组编号 & \multicolumn{2}{c|}{第19组}\\[10pt]\hline
+\multirow{3}{*}{小组成员} & 学号 & 姓名\\[10pt]\cline{2-3}
+ & 2024141460445 & 许盛凯\\[10pt]\cline{2-3}
+ & \ZhaoStudentId & 赵凯彭\\[10pt]\hline
+\end{tabular}}
+\vfill
+{\songti\zihao{4}提交报告时间：\ReportDate\par}
+\vspace*{1.6cm}
+\end{titlepage}
+\pagestyle{empty}
+\tableofcontents
+\clearpage
+\pagestyle{fancy}
+\pagenumbering{arabic}
+\input{sections/01-functions}
+\clearpage
+\input{sections/02-passenger}
+\clearpage
+\input{sections/03-dispatch}
+\clearpage
+\input{sections/04-driver}
+\end{document}

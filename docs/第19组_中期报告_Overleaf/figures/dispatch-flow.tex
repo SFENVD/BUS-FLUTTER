@@ -1,0 +1,18 @@
+\begin{figure}[H]\centering
+\begin{tikzpicture}[node distance=0.45cm,font=\small]
+\node[state,text width=8cm,inner sep=4pt] (a) {读取空闲且绑定司机的候选车辆};
+\node[state,text width=8cm,inner sep=4pt,below=of a] (b) {待调度需求按人数降序排序};
+\node[state,text width=8cm,inner sep=4pt,below=of b] (c) {依次匹配容量足够且本批尚未使用的车辆};
+\node[state,text width=8cm,inner sep=4pt,below=of c] (d) {生成待确认建议，记录车辆使用情况\par 无法匹配的需求保持待调度};
+\node[state,text width=8cm,inner sep=4pt,below=of d] (e) {展示路线、司机、车辆和装载率\par 等待管理员确认};
+\node[state,text width=8cm,inner sep=4pt,below=of e] (f) {复核方案、关联数据与车辆空闲状态};
+\node[state,text width=8cm,inner sep=4pt,below=of f] (g) {确认方案；需求已调度；车辆运行中\par 建立后台车辆位置记录};
+\foreach \s/\t in {a/b,b/c,c/d,d/e,e/f,f/g} \draw[flow] (\s)--(\t);
+\node[box,align=center,text width=2.15cm,right=1.0cm of b] (err) {无候选或\par 无待调度需求\par 返回提示};
+\draw[flow] (a.east)-| (err.north);
+\draw[flow] (b.east)--(err.west);
+\node[box,align=center,text width=2.15cm,right=1.0cm of f] (err2) {复核失败\par 拒绝确认\par 提示原因};
+\draw[flow] (f.east)--(err2.west);
+\end{tikzpicture}
+\caption{规则辅助调度与人工确认活动流程}\label{fig:dispatch-flow}
+\end{figure}
