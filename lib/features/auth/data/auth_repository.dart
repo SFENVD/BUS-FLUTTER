@@ -9,6 +9,10 @@ abstract interface class AuthRepository {
   });
 
   Future<void> logout();
+
+  UserModel? userById(String userId);
+
+  UserModel adjustCreditScore(String userId, int delta);
 }
 
 class AuthException implements Exception {

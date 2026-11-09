@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,11 +8,15 @@ import '../../../core/models/analytics_model.dart';
 import '../../../core/models/dispatch_model.dart';
 import '../../../core/models/vehicle_location_model.dart';
 import '../../../core/models/vehicle_model.dart';
+import '../../../core/persistence/demo_persistence.dart';
+import '../data/admin_state_codec.dart';
 import '../data/mock_admin_repository.dart';
 
 final mockAdminRepositoryProvider = Provider<MockAdminRepository>((ref) {
   return MockAdminRepository();
 });
+
+final adminClockProvider = Provider<DateTime Function()>((ref) => DateTime.now);
 
 final adminProvider = NotifierProvider<AdminController, AdminState>(
   AdminController.new,
@@ -157,18 +162,50 @@ class AdminActionResult {
 
 class AdminController extends Notifier<AdminState> {
   Timer? _locationTimer;
+  bool _applyingExternal = false;
+  String? _lastStoredSnapshot;
 
   @override
   AdminState build() {
     ref.onDispose(_stopLocationTimer);
 
-    final repository = ref.read(mockAdminRepositoryProvider);
-    final locations = repository.fetchLocations();
+    final persistence = ref.read(demoPersistenceProvider);
+    final fallback = _seedState();
+    final saved = persistence.read('admin');
+    final initialState = saved == null
+        ? fallback
+        : restoreDemoData(fallback, () => decodeAdminState(saved, fallback));
+    // Save the seed once so different tabs share the same demand times.
+    _saveToStorage(initialState);
+
+    listenSelf((previous, next) {
+      if (_applyingExternal || previous == null) return;
+      // Selection and simulated position ticks must never overwrite CRUD in
+      // another tab. The current selection is saved with the next business edit.
+      if (!identical(previous.vehicles, next.vehicles) ||
+          !identical(previous.drivers, next.drivers) ||
+          !identical(previous.dispatchDemands, next.dispatchDemands) ||
+          !identical(previous.dispatchPlans, next.dispatchPlans)) {
+        _saveToStorage(next);
+      }
+    });
+    final subscription = persistence.changes.listen((key) {
+      if ((key != 'admin' && key != '*') || !ref.mounted) return;
+      _refreshFromStorage();
+    });
+    ref.onDispose(() => unawaited(subscription.cancel()));
+
     _locationTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       simulateLocationTick();
     });
 
-    final initialState = AdminState(
+    return initialState;
+  }
+
+  AdminState _seedState() {
+    final repository = ref.read(mockAdminRepositoryProvider);
+    final locations = repository.fetchLocations();
+    return AdminState(
       vehicles: repository.fetchVehicles(),
       drivers: repository.fetchDrivers(),
       locations: locations,
@@ -178,8 +215,32 @@ class AdminController extends Notifier<AdminState> {
       selectedAnalyticsPeriod: AnalyticsPeriod.day,
       selectedVehicleId: locations.firstOrNull?.vehicleId,
     );
+  }
 
-    return initialState;
+  void _saveToStorage(AdminState value) {
+    final snapshot = encodeAdminState(value);
+    ref.read(demoPersistenceProvider).write('admin', snapshot);
+    _lastStoredSnapshot = jsonEncode(snapshot);
+  }
+
+  void _refreshFromStorage() {
+    final snapshot = ref.read(demoPersistenceProvider).read('admin');
+    final encoded = snapshot == null ? null : jsonEncode(snapshot);
+    if (encoded == _lastStoredSnapshot) return;
+    final next = snapshot == null
+        ? _seedState()
+        : restoreDemoData(
+            state,
+            () => decodeAdminState(snapshot, state, preserveSelection: true),
+          );
+    _applyingExternal = true;
+    try {
+      state = next;
+      _lastStoredSnapshot = encoded;
+    } finally {
+      _applyingExternal = false;
+    }
+    if (snapshot == null) _saveToStorage(next);
   }
 
   AdminActionResult addVehicle({
@@ -188,6 +249,7 @@ class AdminController extends Notifier<AdminState> {
     required int seatCount,
     required VehicleStatus status,
   }) {
+    _refreshFromStorage();
     final normalizedPlate = plateNo.trim();
     if (normalizedPlate.isEmpty || model.trim().isEmpty || seatCount <= 0) {
       return const AdminActionResult(success: false, message: '请填写完整车辆信息');
@@ -207,30 +269,56 @@ class AdminController extends Notifier<AdminState> {
     return const AdminActionResult(success: true, message: '车辆已新增');
   }
 
-  AdminActionResult updateVehicle(VehicleModel updatedVehicle) {
+  AdminActionResult updateVehicle(
+    VehicleModel updatedVehicle, {
+    VehicleModel? expectedVehicle,
+  }) {
+    _refreshFromStorage();
     final index = state.vehicles.indexWhere(
       (vehicle) => vehicle.id == updatedVehicle.id,
     );
     if (index < 0) {
       return const AdminActionResult(success: false, message: '车辆不存在');
     }
+    final currentVehicle = state.vehicles[index];
+    if (expectedVehicle != null &&
+        (expectedVehicle.id != currentVehicle.id ||
+            expectedVehicle.plateNo != currentVehicle.plateNo ||
+            expectedVehicle.model != currentVehicle.model ||
+            expectedVehicle.seatCount != currentVehicle.seatCount ||
+            expectedVehicle.status != currentVehicle.status)) {
+      return const AdminActionResult(
+        success: false,
+        message: '车辆信息已变化，请重新打开编辑',
+      );
+    }
+    final normalizedVehicle = updatedVehicle.copyWith(
+      plateNo: updatedVehicle.plateNo.trim(),
+      model: updatedVehicle.model.trim(),
+    );
+    if (normalizedVehicle.plateNo.isEmpty ||
+        normalizedVehicle.model.isEmpty ||
+        normalizedVehicle.seatCount <= 0) {
+      return const AdminActionResult(success: false, message: '请填写完整车辆信息');
+    }
 
     final duplicatedPlate = state.vehicles.any(
       (vehicle) =>
-          vehicle.id != updatedVehicle.id &&
-          vehicle.plateNo == updatedVehicle.plateNo,
+          vehicle.id != normalizedVehicle.id &&
+          vehicle.plateNo == normalizedVehicle.plateNo,
     );
     if (duplicatedPlate) {
       return const AdminActionResult(success: false, message: '车牌号已存在');
     }
 
     final nextVehicles = [...state.vehicles];
-    nextVehicles[index] = updatedVehicle;
+    nextVehicles[index] = normalizedVehicle;
     state = state.copyWith(vehicles: nextVehicles);
     return const AdminActionResult(success: true, message: '车辆已更新');
   }
 
   AdminActionResult deleteVehicle(String vehicleId) {
+    _refreshFromStorage();
     final vehicle = state.vehicleById(vehicleId);
     if (vehicle == null) {
       return const AdminActionResult(success: false, message: '车辆不存在');
@@ -264,6 +352,7 @@ class AdminController extends Notifier<AdminState> {
     required String licenseNo,
     String? boundVehicleId,
   }) {
+    _refreshFromStorage();
     if (name.trim().isEmpty ||
         phone.trim().isEmpty ||
         licenseNo.trim().isEmpty) {
@@ -289,37 +378,65 @@ class AdminController extends Notifier<AdminState> {
     return const AdminActionResult(success: true, message: '司机已新增');
   }
 
-  AdminActionResult updateDriver(AdminDriverModel updatedDriver) {
+  AdminActionResult updateDriver(
+    AdminDriverModel updatedDriver, {
+    AdminDriverModel? expectedDriver,
+  }) {
+    _refreshFromStorage();
     final index = state.drivers.indexWhere(
       (driver) => driver.id == updatedDriver.id,
     );
     if (index < 0) {
       return const AdminActionResult(success: false, message: '司机不存在');
     }
+    final currentDriver = state.drivers[index];
+    if (expectedDriver != null &&
+        (expectedDriver.id != currentDriver.id ||
+            expectedDriver.name != currentDriver.name ||
+            expectedDriver.phone != currentDriver.phone ||
+            expectedDriver.licenseNo != currentDriver.licenseNo ||
+            expectedDriver.boundVehicleId != currentDriver.boundVehicleId)) {
+      return const AdminActionResult(
+        success: false,
+        message: '司机信息已变化，请重新打开编辑',
+      );
+    }
+    final normalizedDriver = updatedDriver.copyWith(
+      name: updatedDriver.name.trim(),
+      phone: updatedDriver.phone.trim(),
+      licenseNo: updatedDriver.licenseNo.trim(),
+    );
+    if (normalizedDriver.name.isEmpty ||
+        normalizedDriver.phone.isEmpty ||
+        normalizedDriver.licenseNo.isEmpty) {
+      return const AdminActionResult(success: false, message: '请填写完整司机信息');
+    }
 
     final duplicatedPhone = state.drivers.any(
       (driver) =>
-          driver.id != updatedDriver.id && driver.phone == updatedDriver.phone,
+          driver.id != normalizedDriver.id &&
+          driver.phone == normalizedDriver.phone,
     );
     if (duplicatedPhone) {
       return const AdminActionResult(success: false, message: '手机号已存在');
     }
 
     final bindCheck = _validateVehicleBinding(
-      updatedDriver.id,
-      updatedDriver.boundVehicleId,
+      normalizedDriver.id,
+      normalizedDriver.boundVehicleId,
     );
     if (!bindCheck.success) {
       return bindCheck;
     }
 
     final nextDrivers = [...state.drivers];
-    nextDrivers[index] = updatedDriver;
+    nextDrivers[index] = normalizedDriver;
     state = state.copyWith(drivers: nextDrivers);
     return const AdminActionResult(success: true, message: '司机已更新');
   }
 
   AdminActionResult deleteDriver(String driverId) {
+    _refreshFromStorage();
     final driver = state.driverById(driverId);
     if (driver == null) {
       return const AdminActionResult(success: false, message: '司机不存在');
@@ -363,6 +480,7 @@ class AdminController extends Notifier<AdminState> {
   }
 
   Future<AdminActionResult> generateAiDispatchPlans() async {
+    _refreshFromStorage();
     final candidates = _availableVehicleDriverPairs();
     if (candidates.isEmpty) {
       return const AdminActionResult(
@@ -371,25 +489,36 @@ class AdminController extends Notifier<AdminState> {
       );
     }
 
-    final sortedDemands = [...state.pendingDispatchDemands]
-      ..sort((a, b) => b.passengerCount.compareTo(a.passengerCount));
+    final now = ref.read(adminClockProvider)();
+    final sortedDemands =
+        state.pendingDispatchDemands
+            .where((demand) => demand.departureTime.isAfter(now))
+            .toList()
+          ..sort((a, b) => b.passengerCount.compareTo(a.passengerCount));
     if (sortedDemands.isEmpty) {
-      return const AdminActionResult(success: false, message: '暂无待调度需求');
+      return const AdminActionResult(success: false, message: '暂无未过期的待调度需求');
     }
 
     final nextPlans = <DispatchPlanModel>[];
     final usedVehicleIds = <String>{};
+    final usedDriverIds = <String>{};
 
     for (final demand in sortedDemands) {
       final pair = candidates.where((item) {
         return !usedVehicleIds.contains(item.vehicle.id) &&
-            item.vehicle.seatCount >= demand.passengerCount;
+            !usedDriverIds.contains(item.driver.id) &&
+            _validateDispatchAssignment(
+              demand: demand,
+              vehicle: item.vehicle,
+              driver: item.driver,
+            ).success;
       }).firstOrNull;
       if (pair == null) {
         continue;
       }
 
       usedVehicleIds.add(pair.vehicle.id);
+      usedDriverIds.add(pair.driver.id);
       nextPlans.add(
         _buildDispatchPlan(
           demand: demand,
@@ -421,26 +550,29 @@ class AdminController extends Notifier<AdminState> {
     required String vehicleId,
     required String driverId,
   }) async {
+    _refreshFromStorage();
     final demand = state.dispatchDemands
         .where((item) => item.id == demandId)
         .firstOrNull;
     final vehicle = state.vehicleById(vehicleId);
     final driver = state.driverById(driverId);
 
-    if (demand == null || demand.status != DispatchDemandStatus.pending) {
+    if (demand == null) {
       return const AdminActionResult(success: false, message: '待调度需求不存在');
     }
-    if (vehicle == null || vehicle.status != VehicleStatus.idle) {
+    if (vehicle == null) {
       return const AdminActionResult(success: false, message: '请选择空闲车辆');
     }
     if (driver == null) {
       return const AdminActionResult(success: false, message: '请选择司机');
     }
-    if (driver.boundVehicleId != null && driver.boundVehicleId != vehicle.id) {
-      return const AdminActionResult(success: false, message: '司机已绑定其他车辆');
-    }
-    if (vehicle.seatCount < demand.passengerCount) {
-      return const AdminActionResult(success: false, message: '车辆座位数不足');
+    final validation = _validateDispatchAssignment(
+      demand: demand,
+      vehicle: vehicle,
+      driver: driver,
+    );
+    if (!validation.success) {
+      return validation;
     }
 
     final plan = _buildDispatchPlan(
@@ -463,6 +595,7 @@ class AdminController extends Notifier<AdminState> {
   }
 
   Future<AdminActionResult> confirmDispatchPlan(String planId) async {
+    _refreshFromStorage();
     final planIndex = state.dispatchPlans.indexWhere(
       (plan) => plan.id == planId,
     );
@@ -489,13 +622,39 @@ class AdminController extends Notifier<AdminState> {
       return const AdminActionResult(success: false, message: '调度数据不完整');
     }
 
+    final demand = state.dispatchDemands[demandIndex];
     final vehicle = state.vehicles[vehicleIndex];
-    if (vehicle.status != VehicleStatus.idle) {
-      return const AdminActionResult(success: false, message: '车辆当前不可调度');
+    final driver = state.drivers[driverIndex];
+    final validation = _validateDispatchAssignment(
+      demand: demand,
+      vehicle: vehicle,
+      driver: driver,
+    );
+    if (!validation.success) {
+      return validation;
+    }
+    if (plan.passengerCount != demand.passengerCount ||
+        plan.departureTime != demand.departureTime ||
+        plan.routeName != demand.routeName) {
+      return const AdminActionResult(
+        success: false,
+        message: '需求已变更，请重新生成调度方案',
+      );
     }
 
     final nextPlans = [...state.dispatchPlans];
-    nextPlans[planIndex] = plan.copyWith(isConfirmed: true);
+    nextPlans[planIndex] = DispatchPlanModel(
+      id: plan.id,
+      demandId: demand.id,
+      routeName: demand.routeName,
+      vehicleId: vehicle.id,
+      driverId: driver.id,
+      passengerCount: demand.passengerCount,
+      departureTime: demand.departureTime,
+      loadRate: demand.passengerCount / vehicle.seatCount,
+      isAiGenerated: plan.isAiGenerated,
+      isConfirmed: true,
+    );
 
     final nextDemands = [...state.dispatchDemands];
     nextDemands[demandIndex] = nextDemands[demandIndex].copyWith(
@@ -508,7 +667,6 @@ class AdminController extends Notifier<AdminState> {
     );
 
     final nextDrivers = [...state.drivers];
-    final driver = nextDrivers[driverIndex];
     if (driver.boundVehicleId == null) {
       nextDrivers[driverIndex] = driver.copyWith(
         boundVehicleId: plan.vehicleId,
@@ -543,6 +701,12 @@ class AdminController extends Notifier<AdminState> {
     String? driverId,
     String? vehicleId,
   ) {
+    final driver = state.driverById(driverId);
+    if (driver != null &&
+        driver.boundVehicleId != vehicleId &&
+        _driverHasActiveAssignment(driver)) {
+      return const AdminActionResult(success: false, message: '在途司机不可更换绑定车辆');
+    }
     if (vehicleId == null) {
       return const AdminActionResult(success: true, message: '');
     }
@@ -558,6 +722,50 @@ class AdminController extends Notifier<AdminState> {
     return const AdminActionResult(success: true, message: '');
   }
 
+  AdminActionResult _validateDispatchAssignment({
+    required DispatchDemandModel demand,
+    required VehicleModel vehicle,
+    required AdminDriverModel driver,
+  }) {
+    if (demand.status != DispatchDemandStatus.pending) {
+      return const AdminActionResult(success: false, message: '需求已调度，请勿重复确认');
+    }
+    if (!demand.departureTime.isAfter(ref.read(adminClockProvider)())) {
+      return const AdminActionResult(success: false, message: '需求已到发车时间，请重新安排');
+    }
+    if (demand.passengerCount <= 0) {
+      return const AdminActionResult(success: false, message: '调度人数必须大于零');
+    }
+    if (vehicle.status != VehicleStatus.idle) {
+      return const AdminActionResult(success: false, message: '车辆当前不可调度');
+    }
+    if (vehicle.seatCount < demand.passengerCount) {
+      return const AdminActionResult(success: false, message: '车辆座位数不足');
+    }
+    if (_driverHasActiveAssignment(driver)) {
+      return const AdminActionResult(success: false, message: '司机正在执行其他调度任务');
+    }
+    if (driver.boundVehicleId != null && driver.boundVehicleId != vehicle.id) {
+      return const AdminActionResult(success: false, message: '司机已绑定其他车辆');
+    }
+    return _validateVehicleBinding(driver.id, vehicle.id);
+  }
+
+  bool _driverHasActiveAssignment(AdminDriverModel driver) {
+    bool isRunning(String? vehicleId) {
+      return state.vehicleById(vehicleId)?.status == VehicleStatus.running;
+    }
+
+    return isRunning(driver.boundVehicleId) ||
+        state.locations.any(
+          (location) =>
+              location.driverId == driver.id && isRunning(location.vehicleId),
+        ) ||
+        state.confirmedDispatchPlans.any(
+          (plan) => plan.driverId == driver.id && isRunning(plan.vehicleId),
+        );
+  }
+
   void _stopLocationTimer() {
     _locationTimer?.cancel();
     _locationTimer = null;
@@ -568,7 +776,9 @@ class AdminController extends Notifier<AdminState> {
         .where((vehicle) => vehicle.status == VehicleStatus.idle)
         .map((vehicle) {
           final driver = state.driverForVehicle(vehicle.id);
-          if (driver == null) {
+          if (driver == null ||
+              _driverHasActiveAssignment(driver) ||
+              !_validateVehicleBinding(driver.id, vehicle.id).success) {
             return null;
           }
           return _VehicleDriverPair(vehicle: vehicle, driver: driver);

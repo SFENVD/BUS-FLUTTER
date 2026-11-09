@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/models/app_mode.dart';
 import '../../../core/providers/app_mode_provider.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../shared/widgets/app_mode_switcher.dart';
+import '../../../shared/widgets/demo_data_controls.dart';
 import '../data/mock_auth_repository.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -41,16 +41,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           mode: mode,
         );
 
-    if (!mounted) {
+    if (!mounted || success) {
       return;
     }
 
-    if (success) {
-      context.go(mode.homeLocation);
+    final message = ref.read(authControllerProvider).errorMessage;
+    if (message == null) {
       return;
     }
-
-    final message = ref.read(authControllerProvider).errorMessage ?? '登录失败';
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
@@ -364,6 +362,8 @@ class _LoginForm extends StatelessWidget {
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
+                const SizedBox(height: 12),
+                const DemoDataControls(),
               ],
             ),
           ),

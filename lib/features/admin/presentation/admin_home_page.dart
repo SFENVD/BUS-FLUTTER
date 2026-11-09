@@ -269,6 +269,7 @@ class _VehiclePanel extends ConsumerWidget {
               seatCount: data.seatCount,
               status: data.status,
             ),
+            expectedVehicle: initialVehicle,
           );
     _showSnack(context, result.message);
   }
@@ -357,6 +358,7 @@ class _DriverPanel extends ConsumerWidget {
               boundVehicleId: data.boundVehicleId,
               clearBoundVehicle: data.boundVehicleId == null,
             ),
+            expectedDriver: initialDriver,
           );
     _showSnack(context, result.message);
   }

@@ -3,6 +3,7 @@ import 'dart:async';
 import '../../../core/models/app_mode.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/models/user_role.dart';
+import '../../../core/persistence/demo_persistence.dart';
 import 'auth_repository.dart';
 
 class MockCredential {
@@ -15,6 +16,12 @@ class MockCredential {
 }
 
 class MockAuthRepository implements AuthRepository {
+  MockAuthRepository({DemoPersistence? persistence})
+    : _persistence = persistence;
+
+  final DemoPersistence? _persistence;
+  final Map<String, Object?> _creditScores = {};
+
   static const credentials = <MockCredential>[
     MockCredential(
       password: '123456',
@@ -77,9 +84,49 @@ class MockAuthRepository implements AuthRepository {
       throw AuthException('当前入口是${mode.title}，请切换入口后再登录');
     }
 
-    return matchedCredential.user;
+    return userById(matchedCredential.user.id)!;
   }
 
   @override
   Future<void> logout() async {}
+
+  @override
+  UserModel? userById(String userId) {
+    for (final credential in credentials) {
+      if (credential.user.id == userId) {
+        final score = _readScores()[userId];
+        return credential.user.copyWith(
+          creditScore: score is int
+              ? score.clamp(0, 100)
+              : credential.user.creditScore,
+        );
+      }
+    }
+    return null;
+  }
+
+  @override
+  UserModel adjustCreditScore(String userId, int delta) {
+    final user = userById(userId);
+    if (user == null) {
+      throw const AuthException('账号不存在');
+    }
+
+    final updatedUser = user.copyWith(
+      creditScore: (user.creditScore + delta).clamp(0, 100),
+    );
+    final scores = {..._readScores(), userId: updatedUser.creditScore};
+    _creditScores
+      ..clear()
+      ..addAll(scores);
+    _persistence?.write('scores', scores);
+    return updatedUser;
+  }
+
+  Map<String, Object?> _readScores() {
+    final persistence = _persistence;
+    return persistence == null
+        ? _creditScores
+        : persistence.read('scores') ?? const {};
+  }
 }

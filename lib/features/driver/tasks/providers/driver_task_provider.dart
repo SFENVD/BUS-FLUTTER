@@ -4,6 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/models/driver_task_model.dart';
 import '../../../../core/models/location_update.dart';
+import '../../../../core/models/user_role.dart';
+import '../../../../core/persistence/demo_persistence.dart';
+import '../../../../core/providers/auth_provider.dart';
+import '../data/driver_state_codec.dart';
 import '../data/mock_driver_repository.dart';
 
 final mockDriverRepositoryProvider = Provider<MockDriverRepository>((ref) {
@@ -98,14 +102,50 @@ class DriverTaskController extends Notifier<DriverTaskState> {
       locationUpdates: const [],
     );
 
-    return initialState;
+    final store = ref.read(demoPersistenceProvider);
+    DriverTaskState restore([DriverTaskState? fallback]) {
+      final saved = store.read('driver');
+      return saved == null
+          ? initialState
+          : restoreDemoData(
+              fallback ?? initialState,
+              () => decodeDriverState(saved, initialState),
+            );
+    }
+
+    final restored = restore();
+    listenSelf((previous, next) {
+      store.write('driver', encodeDriverState(next));
+    });
+    final subscription = store.changes.listen((key) {
+      if (key != 'driver' && key != '*') return;
+      state = restore(key == '*' ? initialState : state);
+      _syncTimerWithSession();
+    });
+    ref.onDispose(subscription.cancel);
+    ref.listen(authControllerProvider, (previous, next) {
+      if (previous?.user?.id != next.user?.id ||
+          previous?.user?.role != next.user?.role) {
+        _syncTimerWithSession();
+      }
+    });
+    if (restored.activeTaskId != null &&
+        ref.read(authControllerProvider).user?.role == UserRole.driver) {
+      _startTimer();
+    }
+    if (store.read('driver') == null) {
+      store.write('driver', encodeDriverState(restored));
+    }
+    return restored;
   }
 
   void selectStatsPeriod(String period) {
+    _refreshFromStorage();
     state = state.copyWith(selectedStatsPeriod: period);
   }
 
   DriverActionResult startTask(String taskId) {
+    _refreshFromStorage();
     if (state.activeTaskId != null) {
       return const DriverActionResult(
         success: false,
@@ -128,14 +168,13 @@ class DriverTaskController extends Notifier<DriverTaskState> {
     state = state.copyWith(tasks: nextTasks, activeTaskId: taskId);
 
     _appendLocationUpdate();
-    _locationTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      _appendLocationUpdate();
-    });
+    _startTimer();
 
     return const DriverActionResult(success: true, message: '已发车，位置将每 5 秒上报一次');
   }
 
   DriverActionResult completeActiveTask() {
+    _refreshFromStorage();
     final taskId = state.activeTaskId;
     if (taskId == null) {
       return const DriverActionResult(success: false, message: '当前没有进行中任务');
@@ -166,23 +205,50 @@ class DriverTaskController extends Notifier<DriverTaskState> {
   }
 
   void _appendLocationUpdate() {
+    _refreshFromStorage();
     final task = state.activeTask;
     if (task == null) {
+      _stopTimer();
       return;
     }
 
-    final step = state.locationUpdates
+    final previous = state.locationUpdates
         .where((update) => update.vehicleId == task.vehicleId)
-        .length;
+        .firstOrNull;
     final update = LocationUpdate(
       vehicleId: task.vehicleId,
-      lat: 31.2304 + step * 0.0018,
-      lng: 121.4737 + step * 0.0012,
-      speed: 24 + (step % 5) * 3,
+      lat: previous == null ? 31.2304 : previous.lat + 0.0018,
+      lng: previous == null ? 121.4737 : previous.lng + 0.0012,
+      speed: previous == null || previous.speed >= 36 ? 24 : previous.speed + 3,
       timestamp: DateTime.now(),
     );
 
-    state = state.copyWith(locationUpdates: [update, ...state.locationUpdates]);
+    state = state.copyWith(
+      locationUpdates: [update, ...state.locationUpdates.take(199)],
+    );
+  }
+
+  void _syncTimerWithSession() {
+    if (state.activeTaskId != null &&
+        ref.read(authControllerProvider).user?.role == UserRole.driver) {
+      _startTimer();
+    } else {
+      _stopTimer();
+    }
+  }
+
+  void _refreshFromStorage() {
+    final saved = ref.read(demoPersistenceProvider).read('driver');
+    if (saved != null) {
+      state = restoreDemoData(state, () => decodeDriverState(saved, state));
+    }
+  }
+
+  void _startTimer() {
+    _stopTimer();
+    _locationTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      _appendLocationUpdate();
+    });
   }
 
   void _stopTimer() {

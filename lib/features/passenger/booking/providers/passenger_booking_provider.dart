@@ -6,9 +6,13 @@ import '../../../../core/models/app_notification_model.dart';
 import '../../../../core/models/booking_model.dart';
 import '../../../../core/models/payment_model.dart';
 import '../../../../core/models/trip_model.dart';
+import '../../../../core/persistence/demo_persistence.dart';
 import '../../../../core/providers/auth_provider.dart';
 import '../../../../core/providers/notification_provider.dart';
 import '../data/mock_passenger_repository.dart';
+import '../data/passenger_state_codec.dart';
+
+const paymentAttemptTimeout = Duration(seconds: 10);
 
 final mockPassengerRepositoryProvider = Provider<MockPassengerRepository>((
   ref,
@@ -100,6 +104,42 @@ class PassengerBookingState {
         .where((payment) => payment.bookingId == bookingId)
         .firstOrNull;
   }
+
+  /// Leaves recent attempts alone because another tab may still complete them.
+  PassengerBookingState recoverStalledPayments(DateTime recoveredAt) {
+    final expiredPayments = payments.where(
+      (payment) =>
+          payment.status == PaymentStatus.processing &&
+          !payment.createdAt.add(paymentAttemptTimeout).isAfter(recoveredAt),
+    );
+    final expiredIds = expiredPayments.map((payment) => payment.id).toSet();
+    if (expiredIds.isEmpty) return this;
+    final bookingIds = expiredPayments
+        .map((payment) => payment.bookingId)
+        .toSet();
+
+    return PassengerBookingState(
+      trips: trips,
+      bookings: [
+        for (final booking in bookings)
+          if (booking.paymentStatus == BookingPaymentStatus.processing &&
+              bookingIds.contains(booking.id))
+            booking.copyWith(paymentStatus: BookingPaymentStatus.unpaid)
+          else
+            booking,
+      ],
+      payments: [
+        for (final payment in payments)
+          if (expiredIds.contains(payment.id))
+            payment.copyWith(
+              status: PaymentStatus.failed,
+              completedAt: recoveredAt,
+            )
+          else
+            payment,
+      ],
+    );
+  }
 }
 
 class BookingActionResult {
@@ -119,16 +159,76 @@ class BookingActionResult {
 }
 
 class PassengerBookingController extends Notifier<PassengerBookingState> {
+  Timer? _paymentRecoveryTimer;
+
   @override
   PassengerBookingState build() {
+    final persistence = ref.read(demoPersistenceProvider);
+    final initialState = _seedState();
+    final saved = persistence.read('passenger');
+    final restored = saved == null
+        ? initialState
+        : restoreDemoData(initialState, () => decodePassengerState(saved));
+    final current = restored.recoverStalledPayments(DateTime.now());
+
+    listenSelf((previous, next) {
+      persistence.write('passenger', encodePassengerState(next));
+      _schedulePaymentRecovery(next);
+    });
+    final subscription = persistence.changes.listen((key) {
+      if (key == 'passenger' || key == '*') _refreshFromStorage();
+    });
+    ref.onDispose(() {
+      _paymentRecoveryTimer?.cancel();
+      unawaited(subscription.cancel());
+    });
+    persistence.write('passenger', encodePassengerState(current));
+    _schedulePaymentRecovery(current);
+    return current;
+  }
+
+  PassengerBookingState _seedState() {
     final repository = ref.read(mockPassengerRepositoryProvider);
-    final initialState = PassengerBookingState(
+    return PassengerBookingState(
       trips: repository.fetchTrips(),
       bookings: repository.fetchBookings(),
       payments: const [],
     );
+  }
 
-    return initialState;
+  void _refreshFromStorage() {
+    final saved = ref.read(demoPersistenceProvider).read('passenger');
+    final restored = saved == null
+        ? _seedState()
+        : restoreDemoData(state, () => decodePassengerState(saved));
+    final next = restored.recoverStalledPayments(DateTime.now());
+    if (!identical(next, state)) state = next;
+  }
+
+  void _schedulePaymentRecovery(PassengerBookingState current) {
+    _paymentRecoveryTimer?.cancel();
+    DateTime? deadline;
+    for (final payment in current.payments) {
+      if (payment.status != PaymentStatus.processing) continue;
+      final expiresAt = payment.createdAt.add(paymentAttemptTimeout);
+      if (deadline == null || expiresAt.isBefore(deadline)) {
+        deadline = expiresAt;
+      }
+    }
+    if (deadline == null) return;
+    final expiresAt = deadline;
+    final delay = expiresAt.difference(DateTime.now());
+    _paymentRecoveryTimer = Timer(delay.isNegative ? Duration.zero : delay, () {
+      if (!ref.mounted) return;
+      _refreshFromStorage();
+      final now = DateTime.now();
+      recoverStalledPayments(now: now.isBefore(expiresAt) ? expiresAt : now);
+    });
+  }
+
+  void recoverStalledPayments({DateTime? now}) {
+    final recovered = state.recoverStalledPayments(now ?? DateTime.now());
+    if (!identical(recovered, state)) state = recovered;
   }
 
   Future<BookingActionResult> createBooking({
@@ -136,6 +236,7 @@ class PassengerBookingController extends Notifier<PassengerBookingState> {
     required String tripId,
     required int seatNo,
   }) async {
+    _refreshFromStorage();
     final trip = state.tripById(tripId);
     if (!trip.isBookable) {
       return const BookingActionResult(success: false, message: '该车次暂不可预约');
@@ -191,6 +292,7 @@ class PassengerBookingController extends Notifier<PassengerBookingState> {
   }
 
   Future<BookingActionResult> cancelBooking(String bookingId) async {
+    _refreshFromStorage();
     final index = state.bookings.indexWhere(
       (booking) => booking.id == bookingId,
     );
@@ -209,23 +311,30 @@ class PassengerBookingController extends Notifier<PassengerBookingState> {
     }
 
     final penalty = cancellationPenaltyForTrip(trip);
+    final cancelledAt = DateTime.now();
     final updatedBooking = booking.copyWith(
       status: BookingStatus.cancelled,
-      cancelledAt: DateTime.now(),
+      cancelledAt: cancelledAt,
       creditPenalty: penalty,
-      paymentStatus: booking.paymentStatus == BookingPaymentStatus.paid
-          ? BookingPaymentStatus.refunded
-          : booking.paymentStatus,
+      paymentStatus: switch (booking.paymentStatus) {
+        BookingPaymentStatus.paid => BookingPaymentStatus.refunded,
+        BookingPaymentStatus.processing => BookingPaymentStatus.unpaid,
+        final status => status,
+      },
     );
-
-    final nextBookings = [...state.bookings];
-    nextBookings[index] = updatedBooking;
-
-    state = PassengerBookingState(
-      trips: state.trips,
-      bookings: nextBookings,
-      payments: state.payments,
-    );
+    final payment = state.paymentForBooking(booking.id);
+    final updatedPayment = switch (payment?.status) {
+      PaymentStatus.paid => payment!.copyWith(
+        status: PaymentStatus.refunded,
+        completedAt: cancelledAt,
+      ),
+      PaymentStatus.processing => payment!.copyWith(
+        status: PaymentStatus.failed,
+        completedAt: cancelledAt,
+      ),
+      _ => payment,
+    };
+    _replaceBooking(index, updatedBooking, payment: updatedPayment);
     ref.read(authControllerProvider.notifier).adjustCreditScore(-penalty);
     ref
         .read(notificationProvider.notifier)
@@ -240,6 +349,7 @@ class PassengerBookingController extends Notifier<PassengerBookingState> {
       message: '预约已取消，信用分扣减 $penalty 分',
       booking: updatedBooking,
       creditPenalty: penalty,
+      payment: updatedPayment,
     );
   }
 
@@ -258,6 +368,7 @@ class PassengerBookingController extends Notifier<PassengerBookingState> {
     required String bookingId,
     required PaymentMethod method,
   }) async {
+    _refreshFromStorage();
     final index = state.bookings.indexWhere(
       (booking) => booking.id == bookingId,
     );
@@ -272,8 +383,17 @@ class PassengerBookingController extends Notifier<PassengerBookingState> {
     if (booking.paymentStatus == BookingPaymentStatus.paid) {
       return const BookingActionResult(success: false, message: '该订单已支付');
     }
+    if (booking.paymentStatus == BookingPaymentStatus.processing) {
+      return const BookingActionResult(
+        success: false,
+        message: '该订单正在支付，请勿重复提交',
+      );
+    }
+    if (!booking.canPay) {
+      return const BookingActionResult(success: false, message: '该预约不可支付');
+    }
 
-    var payment = PaymentModel(
+    final payment = PaymentModel(
       id: 'payment-${DateTime.now().microsecondsSinceEpoch}',
       bookingId: booking.id,
       amount: booking.fare,
@@ -289,6 +409,11 @@ class PassengerBookingController extends Notifier<PassengerBookingState> {
 
     await Future<void>.delayed(const Duration(milliseconds: 500));
 
+    if (!ref.mounted) {
+      return const BookingActionResult(success: false, message: '支付会话已结束');
+    }
+    _refreshFromStorage();
+
     final latestIndex = state.bookings.indexWhere(
       (item) => item.id == bookingId,
     );
@@ -299,6 +424,16 @@ class PassengerBookingController extends Notifier<PassengerBookingState> {
     final latestBooking = state.bookings[latestIndex];
     if (latestBooking.status == BookingStatus.cancelled) {
       return const BookingActionResult(success: false, message: '该预约已取消');
+    }
+    final latestPayment = state.paymentForBooking(bookingId);
+    if (latestBooking.status != BookingStatus.pending ||
+        latestBooking.paymentStatus != BookingPaymentStatus.processing ||
+        latestPayment?.id != payment.id ||
+        latestPayment?.status != PaymentStatus.processing) {
+      return const BookingActionResult(
+        success: false,
+        message: '支付状态已变化，请刷新订单',
+      );
     }
 
     final paidBooking = latestBooking.copyWith(
@@ -341,7 +476,7 @@ class PassengerBookingController extends Notifier<PassengerBookingState> {
     if (payment != null) {
       nextPayments = [
         payment,
-        ...state.payments.where((item) => item.id != payment.id),
+        ...state.payments.where((item) => item.bookingId != booking.id),
       ];
     }
 

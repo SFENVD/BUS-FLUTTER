@@ -10,12 +10,11 @@ import '../providers/auth_provider.dart';
 import 'app_routes.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final mode = ref.watch(appModeControllerProvider);
-  final authState = ref.watch(authControllerProvider);
-
-  return GoRouter(
+  final router = GoRouter(
     initialLocation: AppRoutes.login,
     redirect: (context, state) {
+      final mode = ref.read(appModeControllerProvider);
+      final authState = ref.read(authControllerProvider);
       final location = state.matchedLocation;
       final isLogin = location == AppRoutes.login;
       final isAuthenticated = authState.isAuthenticated;
@@ -32,7 +31,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/', redirect: (context, state) => mode.homeLocation),
+      GoRoute(
+        path: '/',
+        redirect: (context, state) =>
+            ref.read(appModeControllerProvider).homeLocation,
+      ),
       GoRoute(
         path: AppRoutes.login,
         builder: (context, state) => const LoginPage(),
@@ -51,6 +54,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+
+  ref.listen(appModeControllerProvider, (_, _) => router.refresh());
+  ref.listen(
+    authControllerProvider.select((auth) => (auth.user?.id, auth.user?.role)),
+    (_, _) => router.refresh(),
+  );
+  ref.onDispose(router.dispose);
+  return router;
 });
 
 bool _isLocationAllowedForMode(String location, String homeLocation) {
